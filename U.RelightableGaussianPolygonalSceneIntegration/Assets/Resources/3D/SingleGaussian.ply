@@ -1,0 +1,24 @@
+ply
+format ascii 1.0
+comment Matrices 
+element gaussian3D
+comment Coordinates in world space for the center of this Gaussians
+property float x
+property float y
+property float z
+comment Values used to construct a scale matrix for this gaussian
+property float xScale
+property float yScale
+property float zScale
+comment Euler angle values used to construct a rotation matrix for this gaussian
+property float alpha
+property float beta
+property float gamma
+comment These two matrices togther can be used to create the covariance
+comment Color value of this Gaussian -- This is temporary and more complex material elements will be added soon
+property float r
+property float g
+property float b
+property float a
+end header
+0 0 0 1 1 1 0 0 0 255 250 90
