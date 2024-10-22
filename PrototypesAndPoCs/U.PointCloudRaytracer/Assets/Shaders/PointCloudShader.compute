@@ -1,0 +1,144 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+
+// Struct which represents a Ray cast in the screen
+struct Ray{
+    float3 origin;
+    float3 direction;
+};
+
+// Struct which represents a point in the point cloud
+struct Point{
+    float3 position;
+    float4 color;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+StructuredBuffer<Point> Points;
+
+// Number of points in the point cloud
+uint numPoints;
+
+// Location of the camera in the scene
+float3 camLoc;
+
+// Color to make pixels which aren't set by a specific point
+float4 backgroundColor;
+
+// Width of the screen in pixels
+uint screenWidthPixels;
+// Height of the screen in pixels
+uint screenHeightPixels;
+// The width of the screen in world coordiantes
+float screenWidthCoords;
+// The height of the screen in world coordinates
+float screenHeightCoords;
+
+// Matrix to transform the point cloud by
+float4x4 transform;
+
+// Calculate the distance between points a and b in 3D space
+float Dist3D(float3 a, float3 b){
+    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2) + pow(a.z - b.z, 2));
+}
+
+// Calculate the point in space correpsonding to this a pixel on the screen
+float3 GetPointFromPixelLoc(uint x, uint y){
+    // Calculate the x and y change in world coords needed to move by a pixel
+    float aspectRatio = (float)screenWidthPixels / (float)screenHeightPixels;
+    float pixShiftX = screenWidthCoords / screenWidthPixels;
+    float pixShiftY = (screenWidthCoords / screenHeightPixels) / aspectRatio;
+
+    // Calculate the position in world coords of the upper left pixel 
+    float3 worldUpperLeft = float3(camLoc.x - (screenWidthCoords / 2), camLoc.y + (screenHeightCoords / 2), camLoc.z + 1);
+    float3 firstPixelLoc = float3(
+        worldUpperLeft.x + (0.5 * pixShiftX), 
+        worldUpperLeft.y - (0.5 * pixShiftY), 
+        worldUpperLeft.z);
+    
+    // Get the location of a point within this pixel to sample
+    float3 pixelWordPos = float3(
+        firstPixelLoc.x + (x * pixShiftX), 
+        firstPixelLoc.y - (y * pixShiftY), 
+        camLoc.z + 1.0);
+
+    return pixelWordPos;
+}
+
+// Calculate what rays cast from point to camera (If any) pass through this pixel (and filter by closest if they do)
+// Then return the color of that point 
+float4 SelectPoint(uint x, uint y){
+    // Get the location of this pixel in space
+    float3 pixelCenter = GetPointFromPixelLoc(x, y);
+
+    // Calculate the x and y suze in world coords needed of a pixel
+    float pixLen = screenWidthCoords / screenWidthPixels;
+
+    Point closestPoint;
+    // Start this at an arbitralily high value to mimic infinity 
+    float closestDist = 1000000;
+
+    // Select the closest point which intersects this pixel if a ray is cast between it and the camera 
+    for(uint i=0; i < numPoints; i++){
+        // Move on if this point isn't closer thtan the current saved point
+        float pointDist = Dist3D(Points[i].position, camLoc);
+
+        if(pointDist < closestDist){
+            // Transform the points position
+            float4 pointForTransform = float4(Points[i].position.x, Points[i].position.y, Points[i].position.z, 1);
+            float4 transformPointInter = mul(transform, pointForTransform);
+            float3 transformPoint = float3(transformPointInter.x, transformPointInter.y, transformPointInter.z);
+            
+
+            // Create the ray being cast from point to camera
+            Ray r;
+            r.origin = transformPoint;
+            r.direction = normalize(camLoc - transformPoint);
+
+            // Get the distance from the ray to this pixel's center
+
+            // Calculate closest point to the center on r
+            float3 v = pixelCenter - r.origin;
+            float dotProd = dot(v, r.direction);
+            dotProd = max(dotProd, 0.0f); 
+            float3 e = r.origin + r.direction * dotProd;
+
+            // Calulcuate distance from e to the pixel center
+            float dist = Dist3D(e, pixelCenter);
+            
+            // Check if the ray passes through the pixel by checking if the dist is less than half the length
+            if(dist <= pixLen){
+                // Save this point as the new closest for this pixel
+                closestPoint = Points[i];
+                closestDist = pointDist;
+            }
+        }
+
+
+
+    }
+
+    // If closest dist has been changed return the color of the saved point
+    if(closestDist != 1000000){
+        // Return the color scaled by distance
+        float darkenFactor = closestDist / 15;
+        return closestPoint.color - darkenFactor;
+    }
+    // Otherwise return the background color
+    else{
+        return backgroundColor;
+    }
+
+
+}
+
+
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = SelectPoint(id.x, id.y);
+}
