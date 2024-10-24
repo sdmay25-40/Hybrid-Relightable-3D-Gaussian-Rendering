@@ -1,7 +1,6 @@
 ply
 format ascii 1.0
-comment Matrices 
-element gaussian3D
+element gaussian3D {Add number of gaussians in the file here}
 comment Coordinates in world space for the center of this Gaussians
 property float x
 property float y

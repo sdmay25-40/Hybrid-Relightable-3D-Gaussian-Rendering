@@ -1,7 +1,6 @@
 ply
 format ascii 1.0
-comment Matrices 
-element gaussian3D
+element gaussian3D 1
 comment Coordinates in world space for the center of this Gaussians
 property float x
 property float y
@@ -15,10 +14,11 @@ property float alpha
 property float beta
 property float gamma
 comment These two matrices togther can be used to create the covariance
-comment Color value of this Gaussian -- This is temporary and more complex material elements will be added soon
+comment Color value of this Gaussian -- This is temporary TODO: Add sphere harmonics and PBR properties
 property float r
 property float g
 property float b
 property float a
+comment TODO: Add normals 
 end header
-0 0 0 1 1 1 0 0 0 255 250 90
+0.5 0.5 0 0.2 0.2 1 0 0 0 1 0 0 1
