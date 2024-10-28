@@ -1,0 +1,7 @@
+#pragma kernel CSMain
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here!
+}

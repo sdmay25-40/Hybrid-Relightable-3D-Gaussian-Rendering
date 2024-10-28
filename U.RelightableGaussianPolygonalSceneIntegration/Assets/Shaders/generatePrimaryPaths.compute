@@ -1,0 +1,17 @@
+#pragma kernel CSMain
+#include "utils.cginc"
+
+RWStructureBuffer<PathPayload> paths;
+float4 cameraWorldPos;
+float tanFovHalf;
+int screenWidth;
+float invScreenHeight;
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint3 pathId = id / pathsPerPixel;
+
+    float pixelXDirCamPos = ((2 * x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
+    float pixelYDirCamPos = ((-2 * y - 1) * invScreenHeight + 1) * tanFovHalf;
+}
