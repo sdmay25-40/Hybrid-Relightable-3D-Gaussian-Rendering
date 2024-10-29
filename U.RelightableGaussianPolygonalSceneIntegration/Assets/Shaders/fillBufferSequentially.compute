@@ -1,0 +1,14 @@
+#pragma kernel CSMain
+
+RWStructuredBuffer<uint> outputBuffer;
+uint count;
+
+[numthreads(32,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    if (index < count)
+    {
+        outputBuffer[index] = index;
+    }
+}

@@ -2,15 +2,16 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+// when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
 public struct PathPayload
 {
-    // when updating, ensure PathPayload in 'Shaders/utils.cginc' is updated to match
     public Vector3 direction;
 }
 
 public class GaussianRenderer : MonoBehaviour
 {
     [SerializeField] private Camera cam;
+    [SerializeField] private ComputeShader fillBufferSequentially;
     [SerializeField] private ComputeShader generatePrimaryPaths;
     [SerializeField] private ComputeShader getPathIntersections;
     [SerializeField] private ComputeShader samplePathIntersections;
@@ -41,8 +42,8 @@ public class GaussianRenderer : MonoBehaviour
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
         paths = new ComputeBuffer(pathCount ,  Marshal.SizeOf(typeof(PathPayload)));
-        pathsEnd = new ComputeBuffer(pathCount + 1, sizeof(int));
-        pathsContinue = new ComputeBuffer(pathCount + 1, sizeof(int));
+        pathsEnd = new ComputeBuffer(pathCount + 1, sizeof(uint));
+        pathsContinue = new ComputeBuffer(pathCount + 1, sizeof(uint));
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
@@ -89,28 +90,34 @@ public class GaussianRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// Builds and Inserts Hybrid Gaussian Render Pipeline command buffer into `CameraEvent.BeforeImageEffects`
+    /// Builds and inserts Hybrid Gaussian Render Pipeline command buffer into `CameraEvent.BeforeImageEffects`
     /// </summary>
     private void BuildCommandBuffer()
     {
-        // Unity handles resource dependency-based synchronization
+
+        // place all paths into pathsEnd
+        int kernelIndex = fillBufferSequentially.FindKernel("CSMain");
+        commandBuffer.SetComputeBufferParam(fillBufferSequentially, kernelIndex, "pathsEnd", pathsEnd);
+        commandBuffer.SetComputeIntParam(fillBufferSequentially, "count", pathsEnd.count);
+        float workGroupX = 32.0f;
+        int threadGroupX = Mathf.CeilToInt(pathsEnd.count / workGroupX);
+        commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
 
         // gen primary paths
-        int kernelIndex = generatePrimaryPaths.FindKernel("CSMain");
-        commandBuffer.SetComputeBufferParam(generatePrimaryPaths,kernelIndex,"paths",paths);
+        kernelIndex = generatePrimaryPaths.FindKernel("CSMain");
+        commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
 
+        // NOTE: Unity handles resource dependency-based synchronization
+        commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsEnd", pathsEnd);
+
+        // TODO: move variables toa constant buffer, they are faster to access and update when compared to individual parameters
+        // Only use parameters if infrequently updates or simplicity
         Vector4 cameraWorldPos = new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1);
-        commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraWorldPos", cameraWorldPos);
+        commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraWorldPos", cameraWorldPos); 
         commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
         commandBuffer.SetComputeIntParam(generatePrimaryPaths, "screenWidth", Screen.width);
         commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
-
-        float workGroupX, workGroupY;
-        workGroupX = workGroupY = 32.0f;
-        int pathCount = Screen.width * Screen.height * pathsPerPixel;
-        int threadGroupX = Mathf.CeilToInt(pathCount / workGroupX);
-        int threadGroupY = Mathf.CeilToInt(pathCount / workGroupY);
-        commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, threadGroupY, 1);
+        // uint pathsPerPixel
 
         // get path intersects
 
