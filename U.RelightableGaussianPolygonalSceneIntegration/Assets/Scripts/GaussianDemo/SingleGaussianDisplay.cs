@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GaussianDisplay : MonoBehaviour
+public class SingleGaussianDisplay : MonoBehaviour
 {
 
     ComputeBuffer gBuffer;
@@ -28,6 +28,7 @@ public class GaussianDisplay : MonoBehaviour
         Material m = Resources.Load("Materials/GaussianDemo/GaussianDemo") as Material;
         m.SetBuffer("gaussians", gBuffer);
         m.SetInt("numGaussians", gaussians.Length);
+        m.SetMatrix("transformInverse", Matrix4x4.identity);
 
         gameObject.GetComponent<MeshRenderer>().material = m;
 

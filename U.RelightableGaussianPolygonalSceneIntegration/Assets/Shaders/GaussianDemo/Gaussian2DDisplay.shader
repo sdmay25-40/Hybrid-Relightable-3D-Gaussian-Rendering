@@ -41,7 +41,7 @@ Shader "RGPSI/Gaussian2DDisplay"
             
             StructuredBuffer<Gaussian3D> gaussians;
             uint numGaussians;
-
+            
             VertOut vert (appdata v)
             {
                 // Pass vertex information through
@@ -59,7 +59,7 @@ Shader "RGPSI/Gaussian2DDisplay"
                     float4 uv4 = float4(v.uv.x, v.uv.y, 0, 1);
                     float4 xt = float4(currGaus.pos.x, currGaus.pos.y, 0, 1) - uv4;
                     float4x1 x = abs(xt);
-
+                    
                     float4x1 tmp = mul(currGaus.invCov, x);
                     float1x1 exponent = -0.5 * mul(transpose(x), tmp);
                     

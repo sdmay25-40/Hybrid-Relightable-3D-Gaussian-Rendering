@@ -8,8 +8,6 @@ using UnityEngine.UIElements;
 // An Object which reprsents a Gaussian in 3D space
 public class Gaussian3D{
 
-    //NOTE: I need to research if this necessary. I don't know if the Gaussian3D class can be passed
-    // to the GPU as is or if this is necessary
     public struct PasssableGaussian3D{
         public Vector3 pos;
         public Matrix4x4 cov;
@@ -65,9 +63,6 @@ public class Gaussian3D{
         _color = new Vector4(r, g, b, a);
         
     }
-
-    //NOTE: I need to research if this necessary. I don't know if the Gaussian3D class can be passed
-    // to the GPU as is or if this is necessary
 
     //Return a simple struct equivalent to the Gaussian which can be passed to the GPU
     public PasssableGaussian3D GetPassableStruct(){
@@ -166,35 +161,6 @@ public class GaussianPlyParser
 
             lineNumber += 1;
         }
-
-        Vector4 uv4 = new Vector4(1, 0.5f, 0, 1);
-        Vector4 xt = new Vector4(readGaussians[0].Position.x, readGaussians[0].Position.y, 0, 1) - uv4;
-        Debug.Log("xDiff: " + xt);
-        Vector4 x = new Vector4(Math.Abs(xt.x), Math.Abs(xt.y), Math.Abs(xt.z), Math.Abs(xt.w));
-
-        Vector4 tmp = readGaussians[0].Covariance.inverse * x;
-        Debug.Log("xTmp: " + tmp);
-        float exponent = -0.5f * Vector3.Cross(x, tmp)[0]; 
-        Debug.Log("XCross:" + Vector3.Cross(x, tmp));
-                    
-
-        float g = MathF.Pow(2.71828f, exponent);
-        Debug.Log("XG: " + g);
-
-        uv4 = new Vector4(0.5f, 0, 0, 1);
-        xt = new Vector4(readGaussians[0].Position.x, readGaussians[0].Position.y, 0, 1) - uv4;
-        Debug.Log("yDiff: " + xt);
-        x = new Vector4(Math.Abs(xt.x), Math.Abs(xt.y), Math.Abs(xt.z), Math.Abs(xt.w));
-
-        tmp = readGaussians[0].Covariance.inverse * x;
-        Debug.Log("yTmp: " + tmp);
-        exponent = -0.5f * Vector3.Cross(x, tmp)[0]; 
-        Debug.Log("YCross:" + Vector3.Cross(x, tmp));
-
-                    
-        g = MathF.Pow(2.71828f, exponent);
-        Debug.Log("YG: " + g);
-
         return readGaussians.ToArray();
     }
 
