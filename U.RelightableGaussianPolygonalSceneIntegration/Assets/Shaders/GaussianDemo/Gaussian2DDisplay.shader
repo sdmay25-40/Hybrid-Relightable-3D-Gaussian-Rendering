@@ -40,7 +40,7 @@ Shader "RGPSI/Gaussian2DDisplay"
 
             
             StructuredBuffer<Gaussian3D> gaussians;
-            int numGaussians;
+            uint numGaussians;
 
             VertOut vert (appdata v)
             {
@@ -56,14 +56,15 @@ Shader "RGPSI/Gaussian2DDisplay"
                     // Find difference between Gaussian center and uv coordinates of this vertex
                     // NOTE: For the sake of this demo we are assuming the Gaussians are being described in 
                     // UV coordinates.
-                    float4 uv4 = float4(v.uv.x, v.uv.y, 0, 0);
-                    float4x1 x = uv4 - float4(currGaus.pos.x, currGaus.pos.y, 0, 0);
+                    float4 uv4 = float4(v.uv.x, v.uv.y, 0, 1);
+                    float4 xt = float4(currGaus.pos.x, currGaus.pos.y, 0, 1) - uv4;
+                    float4x1 x = abs(xt);
+
+                    float4x1 tmp = mul(currGaus.invCov, x);
+                    float1x1 exponent = -0.5 * mul(transpose(x), tmp);
                     
-                    float4 tmp = currGaus.invCov * x;
-                    float4 exponent = -0.5 * (transpose(x) * tmp);
-                    
-                    float g = pow(EULER_NUM, exponent.x);
-                    calculateColor += g * currGaus.color;
+                    float g = pow(EULER_NUM, exponent[0][0]);
+                    calculateColor += currGaus.color * g;
                 }
 
                 o.color = calculateColor;
