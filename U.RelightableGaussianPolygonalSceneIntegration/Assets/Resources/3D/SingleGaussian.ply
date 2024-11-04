@@ -9,10 +9,11 @@ comment Values used to construct a scale matrix for this gaussian
 property float xScale
 property float yScale
 property float zScale
-comment Euler angle values used to construct a rotation matrix for this gaussian
-property float alpha
-property float beta
-property float gamma
+comment Quaternion values used to construct a rotation matrix for this gaussian
+property float qX
+property float qY
+property float qZ
+property float qW
 comment These two matrices togther can be used to create the covariance
 comment Color value of this Gaussian -- This is temporary TODO: Add sphere harmonics and PBR properties
 property float r
@@ -21,4 +22,4 @@ property float b
 property float a
 comment TODO: Add normals 
 end header
-0.5 0.5 0 0.2 0.2 1 0 0 0 1 0 0 1
+0.5 0.5 0 0.2 0.2 1 0 0 0 0 1 0 0 1

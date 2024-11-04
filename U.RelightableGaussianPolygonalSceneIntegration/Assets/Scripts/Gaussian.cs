@@ -50,13 +50,13 @@ public class Gaussian3D{
     // Create a new Gaussian3D object by providing the components of the component vectors and matrices retrieved 
     // from the .ply file
     public Gaussian3D(float x, float y, float z, float xScale, float yScale, float zScale, 
-        float alpha, float beta, float gamma, float r, float g, float b, float a) 
+        float qX, float qY, float qZ, float qW, float r, float g, float b, float a) 
     {   
         _pos = new Vector3(x, y, z);
 
         // Create scale and rotation matrices
         Matrix4x4 scaleMat = Matrix4x4.Scale(new Vector3(xScale, yScale, zScale));
-        Matrix4x4 rotMat = Matrix4x4.Rotate(Quaternion.Euler(alpha, beta, gamma));
+        Matrix4x4 rotMat = Matrix4x4.Rotate(new Quaternion(qX, qY, qZ, qW));
 
 
         // Create covariance matrix from scale and rotation 
@@ -150,11 +150,11 @@ public class GaussianPlyParser
             // If this line isn't a comment
             if(splitLine[0] != "comment"){
                 try{
-                    readGaussians.Add(new Gaussian3D(float.Parse(splitLine[0]), float.Parse(splitLine[1]), 
-                    float.Parse(splitLine[2]), float.Parse(splitLine[3]), float.Parse(splitLine[4]), 
-                    float.Parse(splitLine[5]), float.Parse(splitLine[6]), float.Parse(splitLine[7]), 
-                    float.Parse(splitLine[8]), float.Parse(splitLine[9]), float.Parse(splitLine[10]), 
-                    float.Parse(splitLine[11]), float.Parse(splitLine[12])));
+                    readGaussians.Add(new Gaussian3D(
+                    float.Parse(splitLine[0]), float.Parse(splitLine[1]), float.Parse(splitLine[2]), 
+                    float.Parse(splitLine[3]), float.Parse(splitLine[4]), float.Parse(splitLine[5]), 
+                    float.Parse(splitLine[6]), float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]), 
+                    float.Parse(splitLine[10]), float.Parse(splitLine[11]), float.Parse(splitLine[12]), float.Parse(splitLine[13])));
                 }
                 catch(IndexOutOfRangeException e){
                     throw new InvalidOperationException("Error: The entry on line " + lineNumber + " of " +
