@@ -22,8 +22,5 @@ property float b
 property float a
 comment TODO: Add normals 
 end header
-<<<<<<< HEAD
-0.5 0.5 0 0.2 0.2 1 0 0 0 1 0 0 1
-=======
-0.5 0.5 0 0.15 0.23 1 0 0 0 1 0 0 1
->>>>>>> adeb649 (Demo of Gaussian read in is ready)
+0.5 0.5 0 0.15 0.15 1 0 0 0 0 1 0 0 1
+
