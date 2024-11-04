@@ -11,7 +11,7 @@ Shader "RGPSI/Gaussian2DDisplay"
 
             #include "UnityCG.cginc"
 
-            //#define EULER_NUM = 2.71828
+            static const float EULER_NUM = 2.71828;
 
 
             struct appdata
@@ -62,7 +62,7 @@ Shader "RGPSI/Gaussian2DDisplay"
                     float4 tmp = currGaus.invCov * x;
                     float4 exponent = -0.5 * (transpose(x) * tmp);
                     
-                    float g = pow(2.71828, exponent.x);
+                    float g = pow(EULER_NUM, exponent.x);
                     calculateColor += g * currGaus.color;
                 }
 
