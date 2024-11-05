@@ -1,7 +1,6 @@
 ply
 format ascii 1.0
-
-element simpleGaussian3D {Number of Gaussians here}
+element simpleGaussian3D 4
 comment Coordinates in world space for the center of this Gaussians
 property float x
 property float y
@@ -21,8 +20,7 @@ property float r
 property float g
 property float b
 property float a
-
-element gaussian3D {Number of Gaussians here}
+element gaussian3D 2
 comment Coordinates in world space for the center of this Gaussians
 property float x
 property float y
@@ -38,9 +36,7 @@ property float qZ
 property float qW
 comment These two matrices togther can be used to create the covariance
 property list uchar float coefficients for spherical harmonics
-
-
-element relightableGaussian3D {Number of Gaussians here}
+element relightableGaussian3D 2
 comment Coordinates in world space for the center of this Gaussians
 property float x
 property float y
@@ -72,10 +68,15 @@ property float opacity
 property float ambientOcclusion
 property float refraction
 property float emissive
-
 end header
-
-
+0.25 0.25 0 0.2 0.2 1 0 0 0 0 1 0 0 1
+0.25 0.75 0 0.2 0.2 1 0 0 0 0 0 1 0 1
+0.75 0.25 0 0.2 0.2 1 0 0 0 0 0 0 1 1
+0.75 0.75 0 0.2 0.2 1 0 0 0 0 1 1 0 1
+0 0 0 0.2 0.2 1 1 0 0 0 3 0.5 0.25 0.25
+1 0 0 0.2 0.2 1 1 0 0 0 3 0.5 0.25 0.25
+0.25 0.25 0 0.2 0.2 1 0 0 0 0 1 0 0 1 0 0 1 0.5 0.5 0.5 0.5 0.5 0.5 0.5
+0.25 0.75 0 0.2 0.2 1 0 0 0 0 1 0 0 1 0 0 1 0.5 0.5 0.5 0.5 0.5 0.5 0.5
 
 
 

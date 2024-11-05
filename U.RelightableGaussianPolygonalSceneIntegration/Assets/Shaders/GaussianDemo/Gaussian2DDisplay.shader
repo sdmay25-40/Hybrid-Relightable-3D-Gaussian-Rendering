@@ -34,8 +34,31 @@ Shader "RGPSI/Gaussian2DDisplay"
                 
                 float4x4 invCov;
                 
-                //TODO: Expand this to be PBR materials when the .ply is updated
                 float4 color;
+                
+                // Index of Spherical harmonics coefficients in buffer
+                uint shCoefficientsIndex;
+                // Number of spherical harmonics coefficients
+                uint shCoefficientsNum;
+
+                float3 normal;
+
+                // PBR Propeties (Color is used for albedo)
+                float roughness;
+                float metalness;
+                float specular;
+                float opacity;
+                float ambientOcclusion;
+                float refraction;
+                float emissive;
+
+                /*
+                Used like an enum  to denote what type of Gaussian (in the .ply file) this is
+                0 = simpleGaussian3D
+                1 = gaussian3D
+                2 = relightableGaussian3D
+                */
+                uint gaussianType;
             };
 
             

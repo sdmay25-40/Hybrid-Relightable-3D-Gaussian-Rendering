@@ -9,16 +9,15 @@ public class RotatedGausianDisplay : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Gaussian3D[] gaussians =  GaussianPlyParser.ReadGaussianFile("Assets/Resources/3D/RotatedGaussian.ply");
+        BaseGaussian3D[] gaussians =  GaussianPlyParser.ReadGaussianFile("Assets/Resources/3D/RotatedGaussian.ply");
 
-        Gaussian3D.PasssableGaussian3D[] pGaussians = new Gaussian3D.PasssableGaussian3D[gaussians.Length];
+        BaseGaussian3D.PasssableGaussian3D[] pGaussians = new BaseGaussian3D.PasssableGaussian3D[gaussians.Length];
         for(int i = 0; i < gaussians.Length; i++){
             pGaussians[i] = gaussians[i].GetPassableStruct();
         } 
 
         // Add Gaussians to buffer
-        gBuffer = new ComputeBuffer(gaussians.Length, (sizeof(float) * 3) + (sizeof(float) * 16 * 2) 
-            +  (sizeof(float) * 4));
+        gBuffer = new ComputeBuffer(gaussians.Length,  Gaussian3D.PassableGaussianSize);
 
         gBuffer.SetData(pGaussians);
 
