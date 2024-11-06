@@ -1,5 +1,17 @@
+// when updating, ensure structs in 'Scripts/GaussianRenderer.cs' are updated to match
 struct PathPayload
 {
-    // when updating, ensure PathPayload in 'Scripts/GaussianRenderer.cs' is updated to match
-    float3 direction;
+    float4 direction;
 };
+
+public struct CameraParams
+{
+    public Vector3 cameraWorldPos;
+    public float tanFovHalf;
+    public int screenWidth;
+    public float invScreenHeight;
+    public uint pathsPerPixel;
+    public uint pathCount;
+    public Vector4 cameraQuaternion;
+};
+

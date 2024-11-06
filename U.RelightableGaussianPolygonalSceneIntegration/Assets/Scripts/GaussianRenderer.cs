@@ -3,9 +3,21 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
+// ensure structs satisfy 16-byte alignment
 public struct PathPayload
 {
-    public Vector3 direction;
+    public Vector4 direction;
+}
+
+public struct CameraParams
+{
+    public Vector3 cameraWorldPos;
+    public float tanFovHalf;
+    public int screenWidth;
+    public float invScreenHeight;
+    public uint pathsPerPixel;
+    public uint pathCount;
+    public Vector4 cameraQuaternion;
 }
 
 public class GaussianRenderer : MonoBehaviour
@@ -22,9 +34,10 @@ public class GaussianRenderer : MonoBehaviour
     private RenderTexture renderTexture;
     private CommandBuffer commandBuffer;
     private ComputeBuffer paths;
-    private ComputeBuffer pathsContinue; // buffer of continued path indices
-    private ComputeBuffer pathsContinueTmp; // buffer of temporary continued path indices
-    private ComputeBuffer pathsEnd; // buffer of ended path indices
+    private ComputeBuffer pathsContinueCounter; // buffer of continued path indices
+    private ComputeBuffer pathsContinueTmpCounter; // buffer of temporary continued path indices
+    private ComputeBuffer pathsEndCounter; // buffer of ended path indices
+    private ComputeBuffer cameraParamsConst;
 
     private void Awake()
     {
@@ -46,9 +59,10 @@ public class GaussianRenderer : MonoBehaviour
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
         paths = new ComputeBuffer(pathCount,  Marshal.SizeOf(typeof(PathPayload)));
-        pathsContinue = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
-        pathsContinueTmp = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
-        pathsEnd = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
+        pathsContinueCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
+        pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
+        pathsEndCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
+        cameraParamsConst = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraParams)), ComputeBufferType.Constant);
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
@@ -82,86 +96,84 @@ public class GaussianRenderer : MonoBehaviour
             paths.Release();
             paths = null;
         }
-        if (pathsContinue != null)
+        if (pathsContinueCounter != null)
         {
-            pathsContinue.Release();
-            pathsContinue = null;
+            pathsContinueCounter.Release();
+            pathsContinueCounter = null;
         }
-        if (pathsContinueTmp != null)
+        if (pathsContinueTmpCounter != null)
         {
-            pathsContinueTmp.Release();
-            pathsContinueTmp = null;
+            pathsContinueTmpCounter.Release();
+            pathsContinueTmpCounter = null;
         }
-        if (pathsEnd != null)
+        if (pathsEndCounter != null)
         {
-            pathsEnd.Release();
-            pathsEnd = null;
+            pathsEndCounter.Release();
+            pathsEndCounter = null;
         }
     }
 
     /// <summary>
-    /// Builds and inserts Hybrid Gaussian Render Pipeline command buffer into `CameraEvent.BeforeImageEffects`
+    /// Builds and inserts Hybrid Gaussian Render Pipeline command buffer into `CameraEvent.BeforeImageEffects`.
+    /// NOTE: Unity handles resource dependency-based synchronization!
     /// </summary>
     private void BuildCommandBuffer()
     {
-        commandBuffer.SetBufferCounterValue(pathsContinue, 0);
-        commandBuffer.SetBufferCounterValue(pathsContinueTmp, 0);
-        DispatchComputeFillBufferSequentially();
+        commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
+        commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
 
-        // NOTE: Unity handles resource dependency-based synchronization
-        DispatchComputeGeneratePrimaryPaths();
+        // fill pathsEnd buffer sequentially
+        {
+            int kernelIndex = fillBufferSequentially.FindKernel("CSMain");
+            commandBuffer.SetComputeBufferParam(fillBufferSequentially, kernelIndex, "pathsEndCounter", pathsEndCounter);
+            commandBuffer.SetComputeIntParam(fillBufferSequentially, "count", pathsEndCounter.count);
+            float workGroupX = 32.0f;
+            int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
+            commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
+        }
+
+        // generate primary paths
+        {
+            int kernelIndex = generatePrimaryPaths.FindKernel("CSMain");
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsEndCounter", pathsEndCounter);
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
+            CameraParams cameraParams = new CameraParams
+            {
+                cameraWorldPos = new Vector3(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z),
+                tanFovHalf = Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f),
+                screenWidth = Screen.width,
+                invScreenHeight = 1.0f / Screen.height,
+                pathsPerPixel = (uint)pathsPerPixel,
+                pathCount = (uint) (Screen.width * Screen.height * pathsPerPixel),
+                cameraQuaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
+            };
+            cameraParamsConst.SetData(new CameraParams[] { cameraParams });
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraParamsConst", cameraParamsConst);
+            float workGroupX = 32.0f;
+            int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
+            commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
+        }
 
         for(uint i = 0; i < pathBounceLimit; i++)
         {
-            DispatchComputeGetPathIntersections();
-            DispatchComputeSamplePathIntersections();
+            // get path intersections
+            {
+                // TODO
+                // read from pathsContinue
+                // write to pathsContinueTmp
+            }
+
+            // sample path intersections
+            {
+                // TODO
+                // read from pathsContinueTmp
+                // write to pathsContinue
+                // write to renderTexture
+            }
         }
 
         // commandBuffer.Blit(renderTexture, BuiltinRenderTextureType.CameraTarget);
         cam.AddCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
-    }
-
-    private void DispatchComputeFillBufferSequentially()
-    {
-        int kernelIndex = fillBufferSequentially.FindKernel("CSMain");
-        commandBuffer.SetComputeBufferParam(fillBufferSequentially, kernelIndex, "pathsEnd", pathsEnd);
-        commandBuffer.SetComputeIntParam(fillBufferSequentially, "count", pathsEnd.count);
-        float workGroupX = 32.0f;
-        int threadGroupX = Mathf.CeilToInt(pathsEnd.count / workGroupX);
-        commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
-    }
-
-    private void DispatchComputeGeneratePrimaryPaths()
-    {
-        int kernelIndex = generatePrimaryPaths.FindKernel("CSMain");
-        commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
-        commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsEnd", pathsEnd);
-        commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinue", pathsContinue);
-
-        // TODO: move variables toa constant buffer, they are faster to access and update when compared to individual parameters
-        Vector4 cameraWorldPos = new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1);
-        commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraWorldPos", cameraWorldPos); 
-        commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
-        commandBuffer.SetComputeIntParam(generatePrimaryPaths, "screenWidth", Screen.width);
-        commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
-        // uint pathsPerPixel
-        // uint pathCount
-        // float4 cameraQuat
-        // write to pathsContinue
-    }
-
-    private void DispatchComputeGetPathIntersections()
-    {
-        // TODO
-        // read from pathsContinue
-        // write to pathsContinueTmp
-    }
-
-    private void DispatchComputeSamplePathIntersections()
-    {
-        // TODO
-        // read from pathsContinueTmp
-        // write to pathsContinue
-        // write to renderTexture
     }
 }

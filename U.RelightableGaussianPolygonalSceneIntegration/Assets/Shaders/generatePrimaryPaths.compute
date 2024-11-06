@@ -2,27 +2,29 @@
 #include "utils.cginc"
 
 RWStructuredBuffer<PathPayload> paths;
-StructuredBuffer<int> pathsEnd;
-float4 cameraWorldPos;
-float tanFovHalf;
-uint screenWidth;
-float invScreenHeight;
-uint pathsPerPixel;
-float4 cameraQuat;
+StructuredBuffer<int> pathsEndCounter;
+RWStructuredBuffer<int> pathsContinueCounter;
+StructuredBuffer<CameraParams> cameraParamsConst;
 
 [numthreads(32,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    if (id > pathsEnd[pathCount])
+    if (id > pathsEndCounter[pathCount])
     {
         return;
     }
 
-    float pixelXDirCamPos = ((2 * x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
-    float pixelYDirCamPos = ((-2 * y - 1) * invScreenHeight + 1) * tanFovHalf;
-    float4x4 CameraToWorld = quatToRotMatrix(cameraQuat);
-    float3 dir = CameraToWorld * float3(pixelXDirCamPos, pixelYDirCamPos, 1, 0);
+    // TODO
+    // get x
+    // get y 
+    // get all of the random info from CameraParams
+    // write to paths Continue
 
-    uint pathId = pathsEnd[pathCount]
+    float pixelDirXCamPos = ((2 * x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
+    float pixelDirYCamPos = ((-2 * y - 1) * invScreenHeight + 1) * tanFovHalf;
+    float4x4 CameraToWorld = quatToRotMatrix(cameraQuat);
+    float3 dir = CameraToWorld * float4(pixelDirXCamPos, pixelDirYCamPos, 1, 0);
+
+    uint pathId = pathsEndCounter[pathCount]
     paths[pathId].direction = dir;
 }
