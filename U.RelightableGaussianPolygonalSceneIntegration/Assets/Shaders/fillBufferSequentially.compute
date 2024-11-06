@@ -1,14 +1,14 @@
 #pragma kernel CSMain
 
-RWStructuredBuffer<uint> outputBuffer;
+RWStructuredBuffer<uint> counterBuffer; // ComputeBufferType.Counter
 uint count;
 
 [numthreads(32,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    uint index = id.x;
-    if (index < count)
+    if (id.x < count)
     {
-        outputBuffer[index] = index;
+        uint prevIndex = counterBuffer.IncrementCounter();
+        counterBuffer[prevIndex] = prevIndex;
     }
 }
