@@ -6,12 +6,25 @@ struct PathPayload
 
 public struct CameraParams
 {
-    public Vector3 cameraWorldPos;
+    public Vector3 worldPos;
     public float tanFovHalf;
     public int screenWidth;
     public float invScreenHeight;
     public uint pathsPerPixel;
     public uint pathCount;
-    public Vector4 cameraQuaternion;
+    public Vector4 quaternion;
 };
 
+/// <source> https://www.songho.ca/opengl/gl_quaternion.html </source>
+/// <summary> Converts a normalized quaternion to a rotation matrix.</summary>
+float3x3 quatToRotMatrix(float4 q)
+{
+    return float3x3(
+        // row 1
+        (1 - 2 * q.y * q.y - 2 * q.z * q.z), (2 * q.x * q.y - 2 * q.z * q.w), (2 * q.x * q.z + 2 * q.y * q.w),
+        // row 2
+        (2 * q.x * q.y + 2 * q.z * q.w), (1 - 2 * q.x * q.x - 2 * q.z * q.z), (2 * q.y * q.z - 2 * q.x * q.w),
+        // row 3
+        (2 * q.x * q.z - 2 * q.y * q.w), (2 * q.y * q.z + 2 * q.x * q.w), (1 - 2 * q.x * q.x - 2 * q.y * q.y)
+    );
+}

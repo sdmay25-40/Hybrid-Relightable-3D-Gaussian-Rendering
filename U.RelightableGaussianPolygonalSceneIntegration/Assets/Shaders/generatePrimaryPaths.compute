@@ -14,17 +14,21 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // TODO
-    // get x
-    // get y 
-    // get all of the random info from CameraParams
-    // write to paths Continue
+    int x = (id / cameraParamsConst[0].pathsPerPixel) % cameraParamsConst[0].screenWidth;
+    int y = (id / cameraParamsConst[0].pathsPerPixel) / cameraParamsConst[0].screenWidth;
+    float pixelDirXCamPos = ((2 * x + 1) * cameraParamsConst[0].invScreenHeight - cameraParamsConst[0].screenWidth * cameraParamsConst[0].invScreenHeight) * cameraParamsConst[0].tanFovHalf;
+    float pixelDirYCamPos = ((-2 * y - 1) * cameraParamsConst[0].invScreenHeight + 1) * cameraParamsConst[0].tanFovHalf;
 
-    float pixelDirXCamPos = ((2 * x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
-    float pixelDirYCamPos = ((-2 * y - 1) * invScreenHeight + 1) * tanFovHalf;
-    float4x4 CameraToWorld = quatToRotMatrix(cameraQuat);
-    float3 dir = CameraToWorld * float4(pixelDirXCamPos, pixelDirYCamPos, 1, 0);
+    // Note: camera's image plane is at z = 1
+    float3 pixelDirCamPos = float3(pixelDirXCamPos, pixelDirYCamPos, 1);
 
-    uint pathId = pathsEndCounter[pathCount]
-    paths[pathId].direction = dir;
+    // Note: direction vectors are uneffected by translations
+    float3x3 cameraToWorld = quatToRotMatrix(cameraParamsConst[0].cameraQuaternion);
+    float3 pixelDirWorldPos = mul(cameraToWorld, pixelDirCamPos);
+
+    uint pathId = pathsEndCounter[id]
+    paths[pathId].direction = pixelDirWorldPos;
+
+    uint prevIndex = pathsContinueCounter.IncrementCounter();
+    pathsContinueCounter[prevIndex] = pathId;
 }

@@ -11,13 +11,13 @@ public struct PathPayload
 
 public struct CameraParams
 {
-    public Vector3 cameraWorldPos;
+    public Vector3 worldPos;
     public float tanFovHalf;
     public int screenWidth;
     public float invScreenHeight;
     public uint pathsPerPixel;
     public uint pathCount;
-    public Vector4 cameraQuaternion;
+    public Vector4 quaternion;
 }
 
 public class GaussianRenderer : MonoBehaviour
@@ -140,13 +140,13 @@ public class GaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             CameraParams cameraParams = new CameraParams
             {
-                cameraWorldPos = new Vector3(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z),
+                worldPos = new Vector3(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z),
                 tanFovHalf = Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f),
                 screenWidth = Screen.width,
                 invScreenHeight = 1.0f / Screen.height,
                 pathsPerPixel = (uint)pathsPerPixel,
                 pathCount = (uint) (Screen.width * Screen.height * pathsPerPixel),
-                cameraQuaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
+                quaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
             };
             cameraParamsConst.SetData(new CameraParams[] { cameraParams });
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraParamsConst", cameraParamsConst);
