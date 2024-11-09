@@ -11,7 +11,7 @@ public struct PathPayload
 
 public struct CameraParams
 {
-    public Vector3 worldPos;
+    public Vector3 position;
     public float tanFovHalf;
     public int screenWidth;
     public float invScreenHeight;
@@ -42,7 +42,7 @@ public class GaussianRenderer : MonoBehaviour
     private void Awake()
     {
         // disable camera's rendering
-        if (cam != null)
+        if (cam == null)
         {
             Debug.LogError("'GaussianRender': 'cam' reference not set to an instance of a 'Camera'.");
         }
@@ -72,7 +72,7 @@ public class GaussianRenderer : MonoBehaviour
 
     private void Update()
     {
-        // if camera moves
+        // if camera moves or something moves in the scene...
         // cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
         // commandBuffer.Clear();
         // BuildCommandBuffer();
@@ -125,8 +125,9 @@ public class GaussianRenderer : MonoBehaviour
         // fill pathsEnd buffer sequentially
         {
             int kernelIndex = fillBufferSequentially.FindKernel("CSMain");
-            commandBuffer.SetComputeBufferParam(fillBufferSequentially, kernelIndex, "pathsEndCounter", pathsEndCounter);
+            commandBuffer.SetComputeBufferParam(fillBufferSequentially, kernelIndex, "counterBuffer", pathsEndCounter);
             commandBuffer.SetComputeIntParam(fillBufferSequentially, "count", pathsEndCounter.count);
+
             float workGroupX = 32.0f;
             int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
             commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
@@ -140,7 +141,7 @@ public class GaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             CameraParams cameraParams = new CameraParams
             {
-                worldPos = new Vector3(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z),
+                position = new Vector3(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z),
                 tanFovHalf = Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f),
                 screenWidth = Screen.width,
                 invScreenHeight = 1.0f / Screen.height,
@@ -150,9 +151,10 @@ public class GaussianRenderer : MonoBehaviour
             };
             cameraParamsConst.SetData(new CameraParams[] { cameraParams });
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraParamsConst", cameraParamsConst);
+
             float workGroupX = 32.0f;
             int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
-            commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
+            commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
         }
 
         for(uint i = 0; i < pathBounceLimit; i++)

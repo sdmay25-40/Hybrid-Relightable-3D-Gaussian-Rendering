@@ -4,15 +4,15 @@ struct PathPayload
     float4 direction;
 };
 
-public struct CameraParams
+struct CameraParams
 {
-    public Vector3 worldPos;
-    public float tanFovHalf;
-    public int screenWidth;
-    public float invScreenHeight;
-    public uint pathsPerPixel;
-    public uint pathCount;
-    public Vector4 quaternion;
+    float3 position;
+    float tanFovHalf;
+    int screenWidth;
+    float invScreenHeight;
+    uint pathsPerPixel;
+    uint pathCount;
+    float4 quaternion;
 };
 
 /// <source> https://www.songho.ca/opengl/gl_quaternion.html </source>
