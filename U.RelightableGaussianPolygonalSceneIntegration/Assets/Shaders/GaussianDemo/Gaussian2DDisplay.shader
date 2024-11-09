@@ -80,13 +80,13 @@ Shader "RGPSI/Gaussian2DDisplay"
                     // NOTE: For the sake of this demo we are assuming the Gaussians are being described in 
                     // UV coordinates.
                     float4 uv4 = float4(v.uv.x, v.uv.y, 0, 1);
-                    float4 xt = float4(currGaus.pos.x, currGaus.pos.y, 0, 1) - uv4;
-                    float4x1 x = abs(xt);
+                    float4x1 x = float4(currGaus.pos.x, currGaus.pos.y, 0, 1) - uv4;
+                    x = abs(x);
                     
-                    float4x1 tmp = mul(currGaus.invCov, x);
-                    float1x1 exponent = -0.5 * mul(transpose(x), tmp);
+                    float4 intermediateX = mul(currGaus.invCov, x);
+                    float exponent = -0.5 * mul(transpose(x), intermediateX);
                     
-                    float g = pow(EULER_NUM, exponent[0][0]);
+                    float g = pow(EULER_NUM, exponent);
                     calculateColor += currGaus.color * g;
                 }
 
