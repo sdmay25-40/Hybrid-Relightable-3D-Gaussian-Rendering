@@ -9,7 +9,7 @@ public class FourGaussianDisplay : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        BaseGaussian3D[] gaussians =  GaussianPlyParser.ReadGaussianFile("Assets/Resources/3D/FourGaussian.ply");
+        BaseGaussian3D[] gaussians =  GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/3D/FourGaussian.ply");
 
         BaseGaussian3D.PasssableGaussian3D[] pGaussians = new BaseGaussian3D.PasssableGaussian3D[gaussians.Length];
         for(int i = 0; i < gaussians.Length; i++){
