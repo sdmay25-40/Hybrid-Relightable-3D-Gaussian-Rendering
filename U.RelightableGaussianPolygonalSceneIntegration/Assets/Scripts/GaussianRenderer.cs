@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
-// ensure structs satisfy 16-byte alignment
+// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 public struct PathPayload
 {
     public Vector4 direction;
@@ -38,6 +38,10 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer pathsContinueTmpCounter; // buffer of temporary continued path indices
     private ComputeBuffer pathsEndCounter; // buffer of ended path indices
     private ComputeBuffer cameraParamsConst;
+    private ComputeBuffer gameObjectDatas;
+    private ComputeBuffer aabbs;
+    private ComputeBuffer materialDatas;
+    private ComputeBuffer triangles;
 
     private void Awake()
     {
@@ -67,6 +71,7 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
+        SceneSerializer.GetSceneData(ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles);
         BuildCommandBuffer();
     }
 
@@ -110,6 +115,31 @@ public class GaussianRenderer : MonoBehaviour
         {
             pathsEndCounter.Release();
             pathsEndCounter = null;
+        }
+        if (cameraParamsConst != null)
+        {
+            cameraParamsConst.Release();
+            cameraParamsConst = null;
+        }
+        if (gameObjectDatas != null)
+        {
+            gameObjectDatas.Release();
+            gameObjectDatas = null;
+        }
+        if(aabbs != null)
+        {
+            aabbs.Release();
+            aabbs = null;
+        }
+        if(materialDatas != null)
+        {
+            materialDatas.Release();
+            materialDatas = null;
+        }
+        if(triangles != null)
+        {
+            triangles.Release();
+            triangles = null;
         }
     }
 
@@ -178,4 +208,5 @@ public class GaussianRenderer : MonoBehaviour
         // commandBuffer.Blit(renderTexture, BuiltinRenderTextureType.CameraTarget);
         cam.AddCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
     }
+
 }

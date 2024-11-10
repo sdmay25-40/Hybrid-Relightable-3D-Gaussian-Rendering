@@ -1,4 +1,4 @@
-// when updating, ensure structs in 'Scripts/GaussianRenderer.cs' are updated to match
+// when updating, ensure structs in 'Scripts/GaussianRenderer.cs' & 'Scripts/SceneSerializer' are updated to match
 struct PathPayload
 {
     float4 direction;
@@ -13,6 +13,38 @@ struct CameraParams
     uint pathsPerPixel;
     uint pathCount;
     float4 quaternion;
+};
+
+struct GameObjectData
+{
+    float4x4 objectToWorld;
+    float4x4 worldToObject;
+    uint aabbRootIndex;
+    uint materialIndex;
+    float2 padding;
+};
+
+struct AABB
+{
+    float3 min;
+    float3 max;
+    uint leftChildIndex;
+    uint rightChildIndex;
+    uint triangleCount;
+    uint triangleStartIndex;
+    float2 padding;
+};
+
+struct MaterialData
+{
+    float4 albedo;
+};
+
+struct Triangle
+{
+    float4 position0;
+    float4 position1;
+    float4 position2;
 };
 
 /// <source> https://www.songho.ca/opengl/gl_quaternion.html </source>
