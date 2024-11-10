@@ -1,3 +1,5 @@
+const float EPSILON = 0.001;
+
 // when updating, ensure structs in 'Scripts/GaussianRenderer.cs' & 'Scripts/SceneSerializer' are updated to match
 struct PathPayload
 {
@@ -7,11 +9,15 @@ struct PathPayload
 struct CameraParams
 {
     float3 position;
+    uint pathCount;
+};
+
+struct PrimaryGenData
+{
     float tanFovHalf;
     int screenWidth;
     float invScreenHeight;
     uint pathsPerPixel;
-    uint pathCount;
     float4 quaternion;
 };
 
@@ -42,9 +48,7 @@ struct MaterialData
 
 struct Triangle
 {
-    float4 position0;
-    float4 position1;
-    float4 position2;
+    float4 positions[3];
 };
 
 /// <source> https://www.songho.ca/opengl/gl_quaternion.html </source>

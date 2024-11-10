@@ -1,7 +1,72 @@
 #pragma kernel CSMain
+#include "utils.cginc"
 
-[numthreads(32,32,1)]
+StructuredBuffer<PathPayload> paths;
+StructuredBufferBuffer<uint> pathsContinueCounter;
+StructuredBuffer<CameraParams> cameraParamsConst;
+float4 gameObjectDataCount;
+StructuredBuffer<GameObjectData> gameObjectDatas;
+StructuredBuffer<AABB> aabbs;
+StructuredBuffer<Triangle> triangles;
+RWStructuredBuffer<uint> pathsContinueTmp;
+
+[numthreads(32,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // TODO: insert actual code here!
+    if (id.x > pathsContinueCounter[cameraParamsConst[0].pathCount])
+    {
+        return;
+    }
+
+    uint pathId = pathsContinueCounter[id.x];
+    PathPayload path = paths[pathId]; // hopefully a deep copy and not a reference
+
+    for (int i = 0; i < gameObjectDataCount; i++)
+    {
+        GameObjectData currGameObj = gameObjectDatas[i];
+        float3 cameraPositionObjSpace = mul(currGameObj.worldToObject, float4(cameraParamsConst[0].position,1));
+        float3 pathDirObjSpace = mul(currGameObj.worldToObject, path.direction);
+
+        // TODO: check for AABB intersections
+        AABB aabb = aabbs[currGameObj.aabbRootIndex];
+
+        // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+        // TODO: closest hit record
+        for (int j = 0; j < aabb.triangleCount; j++)
+        {
+            // TODO: precompute A,B,C,D potential perforamnce improvement (not always an improvement...)
+            Triangle tri = triangles[aabb.triangleStartIndex + j];
+            float3 aToB = tri.positions[1] - tri.positions[0];
+            float3 aToC = tri.positions[2] - tri.positions[0];
+            float3 p = cross(pathDirObjSpace, aToC);
+
+            float det  = dot(p, aToB);
+            if (det < EPSILON)
+            {
+                continue;
+            }
+
+            float invDet = 1 / det;
+
+            float3 aToOrigin = cameraPositionObjSpace - tri.positions[0];
+            float u = dot(p, aToOrigin) * invDet;
+            if (u < 0 || u > 1)
+            {
+                continue; 
+            }
+
+            float3 q = cross(aToOrigin, aToB);
+            float v = dot(q, pathDirObjSpace) * invDet;
+            if (v < 0 || u + v > 1)
+            {
+                continue;
+            }
+
+            float t = dot(q, aToC) * invDet;
+            // set to closest hit record if t is closer
+        }
+    }
+
+    // if closest hit record has a non -infty t then add path to pathsContinue tmp 
+    // write to non existent PathHitRecord buffer
 }

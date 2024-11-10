@@ -43,7 +43,7 @@ public struct Triangle
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void GetSceneData(ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
+    public static void GetSceneData(ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
     {
         List<GameObjectData> gameObjectDatas = new List<GameObjectData>();
         List<AABB> aabbs = new List<AABB>();
@@ -145,6 +145,8 @@ public class SceneSerializer : MonoBehaviour
 
             gameObjectDatas.Add(currGameObj);
         }
+
+        gameObjectDataCount = gameObjectDatas.Count;
 
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
         aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
