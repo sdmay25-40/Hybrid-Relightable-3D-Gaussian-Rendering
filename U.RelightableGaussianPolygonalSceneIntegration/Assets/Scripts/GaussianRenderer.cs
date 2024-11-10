@@ -9,6 +9,14 @@ public struct PathPayload
     public Vector4 direction;
 }
 
+public struct PathHitRecord
+{
+    public float t;
+    public float u;
+    public float v;
+    public uint materialIndex;
+}
+
 public struct CameraParams
 {
     public Vector3 position;
@@ -164,28 +172,25 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
         commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
 
+        float workGroupX = 32.0f;
+        int threadGroupX = Mathf.CeilToInt(paths.count / workGroupX);
+
         // fill pathsEnd buffer sequentially
         {
             int kernelIndex = fillBufferSequentially.FindKernel("CSMain");
-
             commandBuffer.SetComputeBufferParam(fillBufferSequentially, kernelIndex, "counterBuffer", pathsEndCounter);
             commandBuffer.SetComputeIntParam(fillBufferSequentially, "count", pathsEndCounter.count);
-
-            float workGroupX = 32.0f;
-            int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
             commandBuffer.DispatchCompute(fillBufferSequentially, kernelIndex, threadGroupX, 1, 1);
         }
 
         // generate primary paths
         {
             int kernelIndex = generatePrimaryPaths.FindKernel("CSMain");
-
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsEndCounter", pathsEndCounter);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
 
-            int pathCount = Screen.width * Screen.height * pathsPerPixel;
-            commandBuffer.SetComputeIntParam(generatePrimaryPaths, "pathCount", pathCount);
+            commandBuffer.SetComputeIntParam(generatePrimaryPaths, "pathCount", paths.count);
 
             PrimaryGenData primaryGenData = new PrimaryGenData
             {
@@ -198,8 +203,6 @@ public class GaussianRenderer : MonoBehaviour
             primaryGenDataConst.SetData(new PrimaryGenData[] { primaryGenData });
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "primaryGenDataConst", primaryGenDataConst);
 
-            float workGroupX = 32.0f;
-            int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
         }
 
@@ -207,27 +210,24 @@ public class GaussianRenderer : MonoBehaviour
         {
             // get path intersections
             {
-                int kernelIndex = generatePrimaryPaths.FindKernel("CSMain");
-
+                int kernelIndex = getPathIntersections.FindKernel("CSMain");
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "paths", paths);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "aabbs", aabbs);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "triangles", triangles);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "gameObjectDatas", gameObjectDatas);
-                commandBuffer.SetComputeFloatParam(getPathIntersections, "gameObjectDataCount", gameObjectDataCount);
+                commandBuffer.SetComputeIntParam(getPathIntersections, "gameObjectDataCount", gameObjectDataCount);
 
                 CameraParams cameraParams = new CameraParams
                 {
                     position = new Vector3(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z),
-                    pathCount = (uint) (Screen.width * Screen.height * pathsPerPixel),
+                    pathCount = (uint) paths.count
                 };
                 cameraParamsConst.SetData(new CameraParams[] { cameraParams });
-                commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraParamsConst", cameraParamsConst);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "cameraParamsConst", cameraParamsConst);
 
-                float workGroupX = 32.0f;
-                int threadGroupX = Mathf.CeilToInt(pathsEndCounter.count / workGroupX);
-                commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
+                commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
 
             // sample path intersections

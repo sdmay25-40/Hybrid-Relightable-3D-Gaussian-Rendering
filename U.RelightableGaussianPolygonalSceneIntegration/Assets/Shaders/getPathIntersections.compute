@@ -2,9 +2,9 @@
 #include "utils.cginc"
 
 StructuredBuffer<PathPayload> paths;
-StructuredBufferBuffer<uint> pathsContinueCounter;
+StructuredBuffer<uint> pathsContinueCounter;
 StructuredBuffer<CameraParams> cameraParamsConst;
-float4 gameObjectDataCount;
+int gameObjectDataCount;
 StructuredBuffer<GameObjectData> gameObjectDatas;
 StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
