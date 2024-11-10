@@ -3,7 +3,7 @@
 
 StructuredBuffer<uint> pathsEndCounter;
 int pathCount;
-StructuredBUffer<PrimaryGenData> primaryGenDataConst;
+StructuredBuffer<PrimaryGenData> primaryGenDataConst;
 RWStructuredBuffer<PathPayload> paths; 
 RWStructuredBuffer<uint> pathsContinueCounter;
 

@@ -1,9 +1,18 @@
+const float FLT_MAX = 3.402823e+38;
 const float EPSILON = 0.001;
 
 // when updating, ensure structs in 'Scripts/GaussianRenderer.cs' & 'Scripts/SceneSerializer' are updated to match
 struct PathPayload
 {
     float4 direction;
+};
+
+struct PathHitRecord
+{
+    float t;
+    float u;
+    float v;
+    uint materialIndex;
 };
 
 struct CameraParams

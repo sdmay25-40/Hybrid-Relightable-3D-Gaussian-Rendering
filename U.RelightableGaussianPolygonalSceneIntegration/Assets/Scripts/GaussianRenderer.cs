@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -46,6 +47,7 @@ public class GaussianRenderer : MonoBehaviour
     private RenderTexture renderTexture;
     private CommandBuffer commandBuffer;
     private ComputeBuffer paths;
+    private ComputeBuffer pathHitRecords;
     private ComputeBuffer pathsContinueCounter; // buffer of continued path indices
     private ComputeBuffer pathsContinueTmpCounter; // buffer of temporary continued path indices
     private ComputeBuffer pathsEndCounter; // buffer of ended path indices
@@ -77,6 +79,7 @@ public class GaussianRenderer : MonoBehaviour
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
         paths = new ComputeBuffer(pathCount,  Marshal.SizeOf(typeof(PathPayload)));
+        pathHitRecords = new ComputeBuffer(pathCount, Marshal.SizeOf(typeof(PathHitRecord)));
         pathsContinueCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsEndCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
@@ -115,6 +118,11 @@ public class GaussianRenderer : MonoBehaviour
         {
             paths.Release();
             paths = null;
+        }
+        if (pathHitRecords != null)
+        {
+            pathHitRecords.Release();
+            pathHitRecords = null;
         }
         if (pathsContinueCounter != null)
         {
@@ -212,6 +220,7 @@ public class GaussianRenderer : MonoBehaviour
             {
                 int kernelIndex = getPathIntersections.FindKernel("CSMain");
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "paths", paths);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "aabbs", aabbs);
@@ -230,16 +239,22 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
 
+            commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
+
             // sample path intersections
             {
-                // TODO
-                // read from pathsContinueTmp
-                // write to pathsContinue
-                // write to renderTexture
+                int kernelIndex = samplePathIntersections.FindKernel("CSMain");
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "cameraParamsConst", cameraParamsConst);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "materialDatas", materialDatas);
+                commandBuffer.SetComputeTextureParam(samplePathIntersections, kernelIndex, "renderTexture", renderTexture);
+                commandBuffer.DispatchCompute(samplePathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
         }
 
-        // commandBuffer.Blit(renderTexture, BuiltinRenderTextureType.CameraTarget);
+        commandBuffer.Blit(renderTexture, BuiltinRenderTextureType.CameraTarget);
         cam.AddCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
     }
 }
