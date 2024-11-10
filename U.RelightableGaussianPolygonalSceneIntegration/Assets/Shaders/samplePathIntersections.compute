@@ -5,6 +5,8 @@ StructuredBuffer<uint> pathsContinueTmpCounter;
 StructuredBuffer<CameraParams> cameraParamsConst;
 StructuredBuffer<PathHitRecord> pathHitRecords;
 StructuredBuffer<MaterialData> materialDatas;
+int screenWidth;
+int pathsPerPixel;
 RWStructuredBuffer<uint> pathsContinueCounter;
 RWTexture2D<float4> renderTexture;
 
@@ -19,13 +21,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     uint pathId = pathsContinueTmpCounter[id.x];
     PathHitRecord hitRecord = pathHitRecords[pathId];
 
-    // write to pathsContinue
     if (hitRecord.t < FLT_MAX)
     {
         float4 color  = materialDatas[hitRecord.materialIndex].albedo;
-
-        uint x = 0;
-        uint y = 0;
+        
+        uint x = (uint) ((pathId / pathsPerPixel) % screenWidth);
+        uint y = (uint) ((pathId / pathsPerPixel) / screenWidth);
         renderTexture[uint2(x,y)] = color;
     }
 }
