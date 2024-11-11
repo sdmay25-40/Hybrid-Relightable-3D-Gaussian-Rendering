@@ -15,20 +15,20 @@ struct PathHitRecord
     uint materialIndex;
 };
 
-struct CameraParams
-{
-    float3 position;
-    uint pathCount;
-};
+// struct CameraParams
+// {
+//     float3 position;
+//     uint pathCount;
+// };
 
-struct PrimaryGenData
-{
-    float tanFovHalf;
-    int screenWidth;
-    float invScreenHeight;
-    uint pathsPerPixel;
-    float4 quaternion;
-};
+// struct PrimaryGenData
+// {
+//     float tanFovHalf;
+//     int screenWidth;
+//     float invScreenHeight;
+//     uint pathsPerPixel;
+//     float4 quaternion;
+// };
 
 struct GameObjectData
 {

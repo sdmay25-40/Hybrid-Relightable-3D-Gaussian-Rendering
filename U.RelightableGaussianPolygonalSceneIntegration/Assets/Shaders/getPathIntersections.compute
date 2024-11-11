@@ -20,7 +20,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     }
 
     uint pathId = pathsContinueCounter[id.x];
-    PathPayload path = paths[pathId]; // hopefully a deep copy and not a reference
+    PathPayload path = paths[pathId];
 
     PathHitRecord closestHit;
     closestHit.t = FLT_MAX;

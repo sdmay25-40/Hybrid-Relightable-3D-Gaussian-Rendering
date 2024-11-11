@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
 public struct GameObjectData
@@ -43,7 +44,7 @@ public struct Triangle
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void GetSceneData(ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
+    public static void GetSceneData(ref CommandBuffer commandBuffer, ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
     {
         List<GameObjectData> gameObjectDatas = new List<GameObjectData>();
         List<AABB> aabbs = new List<AABB>();
@@ -153,9 +154,21 @@ public class SceneSerializer : MonoBehaviour
         materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
         trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
 
-        gameObjectDatasBuffer.SetData(gameObjectDatas.ToArray());
-        aabbsBuffer.SetData(aabbs.ToArray());
-        materialDatasBuffer.SetData(materialDatas.ToArray());
-        trianglesBuffer.SetData(triangles.ToArray());
+        commandBuffer.SetBufferData<GameObjectData>(gameObjectDatasBuffer, gameObjectDatas);
+        commandBuffer.SetBufferData<AABB>(aabbsBuffer, aabbs);
+        commandBuffer.SetBufferData<MaterialData>(materialDatasBuffer,materialDatas);
+        commandBuffer.SetBufferData<Triangle>(trianglesBuffer, triangles);
+
+        // // debugging
+        // gameObjectDatasBuffer.SetData(gameObjectDatas.ToArray());
+        // aabbsBuffer.SetData(aabbs.ToArray());
+        // materialDatasBuffer.SetData(materialDatas.ToArray());
+        // trianglesBuffer.SetData(triangles.ToArray());
+        // Triangle[] data = new Triangle[trianglesBuffer.count];
+        // trianglesBuffer.GetData(data);
+        // for (int i = 0; i < trianglesBuffer.count; i++)
+        // {
+        //     Debug.Log($"Triangle[{i}]:\n   Index0: {data[i].position0}\n   Index1: {data[i].position1}\n   Index2: {data[i].position2}\n");
+        // }
     }
 }
