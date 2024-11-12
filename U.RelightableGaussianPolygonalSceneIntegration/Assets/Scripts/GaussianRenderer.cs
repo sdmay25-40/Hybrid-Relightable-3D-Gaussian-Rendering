@@ -157,7 +157,6 @@ public class GaussianRenderer : MonoBehaviour
     private void BuildCommandBuffer()
     {
         commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
-        commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
 
         // // debugging
         // pathsContinueCounter.SetCounterValue(0);
@@ -207,6 +206,8 @@ public class GaussianRenderer : MonoBehaviour
 
         for(uint i = 0; i < pathBounceLimit; i++)
         {
+
+            commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
             commandBuffer.CopyCounterValue(pathsContinueCounter, pathsContinueCounterValue, 0);
 
             // // debugging
@@ -243,6 +244,8 @@ public class GaussianRenderer : MonoBehaviour
             }
 
             commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
+            commandBuffer.CopyCounterValue(pathsContinueTmpCounter, pathsContinueTmpCounterValue, 0);
+
 
             // // debugging
             // ComputeBuffer.CopyCount(pathsContinueTmpCounter, pathsContinueTmpCounterValue, 0);
