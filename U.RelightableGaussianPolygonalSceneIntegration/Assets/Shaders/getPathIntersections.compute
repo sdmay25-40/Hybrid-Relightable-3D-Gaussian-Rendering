@@ -6,7 +6,6 @@ StructuredBuffer<uint> pathsContinueCounter;
 StructuredBuffer<uint> pathsContinueCounterValue;
 StructuredBuffer<GameObjectData> gameObjectDatas;
 int gameObjectDataCount;
-float3 cameraPosition;
 StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
@@ -23,22 +22,22 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     uint pathId = pathsContinueCounter[id.x];
     PathPayload path = paths[pathId];
 
-    PathHitRecord closestHit;
+    PathHitRecord closestHit = pathHitRecords[pathId];
     closestHit.t = FLT_MAX;
 
     for (int i = 0; i < gameObjectDataCount; i++)
     {
         GameObjectData currGameObj = gameObjectDatas[i];
-        float3 cameraPositionObjSpace = (float3) mul(currGameObj.worldToObject, float4(cameraPosition,1));
+        float3 pathOriginObjSpace = (float3) mul(currGameObj.worldToObject, path.origin);
         float3 pathDirObjSpace = (float3) mul(currGameObj.worldToObject, path.direction);
 
         // TODO: check for AABB intersections
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
 
+        // TODO: precompute A,B,C,D potential perforamnce improvement (not always an improvement...)
         // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
         for (uint j = 0; j < aabb.triangleCount; j++)
         {
-            // TODO: precompute A,B,C,D potential perforamnce improvement (not always an improvement...)
             Triangle tri = triangles[aabb.triangleStartIndex + j];
             float3 aToB = (float3) (tri.positions[1] - tri.positions[0]);
             float3 aToC = (float3) (tri.positions[2] - tri.positions[0]);
@@ -52,7 +51,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             float invDet = 1 / det;
 
-            float3 aToOrigin = cameraPositionObjSpace - (float3) tri.positions[0];
+            float3 aToOrigin = pathOriginObjSpace - (float3) tri.positions[0];
             float u = dot(p, aToOrigin) * invDet;
             if (u < 0 || u > 1)
             {

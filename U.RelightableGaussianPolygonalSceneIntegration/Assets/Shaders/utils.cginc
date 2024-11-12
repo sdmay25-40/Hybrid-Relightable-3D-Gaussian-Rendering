@@ -1,10 +1,11 @@
-const float FLT_MAX = 3.402823e+38;
-const float EPSILON = 0.001;
+#define FLT_MAX 3.402823e+38
+#define EPSILON 0.001
 
 // when updating, ensure structs in 'Scripts/GaussianRenderer.cs' & 'Scripts/SceneSerializer' are updated to match
 struct PathPayload
 {
     float4 direction;
+    float4 origin;
 };
 
 struct PathHitRecord
@@ -14,21 +15,6 @@ struct PathHitRecord
     float v;
     uint materialIndex;
 };
-
-// struct CameraParams
-// {
-//     float3 position;
-//     uint pathCount;
-// };
-
-// struct PrimaryGenData
-// {
-//     float tanFovHalf;
-//     int screenWidth;
-//     float invScreenHeight;
-//     uint pathsPerPixel;
-//     float4 quaternion;
-// };
 
 struct GameObjectData
 {

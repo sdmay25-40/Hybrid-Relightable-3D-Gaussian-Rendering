@@ -62,6 +62,8 @@ public class SceneSerializer : MonoBehaviour
             Transform transform = meshRenderer.gameObject.transform;
             currGameObj.objectToWorld = transform.localToWorldMatrix;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
+            // Debug.Log(currGameObj.objectToWorld);
+            // Debug.Log(currGameObj.worldToObject);
 
             MeshFilter meshFilter = meshRenderer.gameObject.GetComponent<MeshFilter>();
             if (!meshFilter)
@@ -74,7 +76,7 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
-                // we are only creating one AABB per mesh so aabb is root
+                // we are only creating one AABB per mesh atm so aabb is root
                 aabbRootIndex = (uint)aabbs.Count; 
                 meshInstanceToAABB.Add(meshInstanceId, aabbs.Count);
 

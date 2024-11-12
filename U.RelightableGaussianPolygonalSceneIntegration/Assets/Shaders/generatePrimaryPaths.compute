@@ -6,6 +6,7 @@ int pathsPerPixel;
 int screenWidth;
 float invScreenHeight;
 float tanFovHalf;
+float4 cameraPosition;
 float4 cameraQuaternion;
 RWStructuredBuffer<PathPayload> paths; 
 RWStructuredBuffer<uint> pathsContinueCounter;
@@ -30,6 +31,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3x3 cameraToWorld = quatToRotMatrix(cameraQuaternion);
     float3 pixelDirWorldSpace = normalize(mul(cameraToWorld, pixelDirCamSpace));
     paths[pathId].direction = float4(pixelDirWorldSpace, 0);
+    paths[pathId].origin = cameraPosition;
 
     uint prevIndex = pathsContinueCounter.IncrementCounter();
     pathsContinueCounter[prevIndex] = pathId;
