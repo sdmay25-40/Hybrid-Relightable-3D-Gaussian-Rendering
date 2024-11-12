@@ -3,9 +3,10 @@
 
 StructuredBuffer<PathPayload> paths;
 StructuredBuffer<uint> pathsContinueCounter;
-StructuredBuffer<CameraParams> cameraParamsConst;
-int gameObjectDataCount;
+StructuredBuffer<uint> pathsContinueCounterValue;
 StructuredBuffer<GameObjectData> gameObjectDatas;
+int gameObjectDataCount;
+float3 cameraPosition;
 StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
@@ -14,7 +15,7 @@ RWStructuredBuffer<uint> pathsContinueTmpCounter;
 [numthreads(32,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    if (id.x > pathsContinueCounter[cameraParamsConst[0].pathCount])
+    if (id.x > pathsContinueCounterValue[0])
     {
         return;
     }
@@ -28,7 +29,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     for (int i = 0; i < gameObjectDataCount; i++)
     {
         GameObjectData currGameObj = gameObjectDatas[i];
-        float3 cameraPositionObjSpace = (float3) mul(currGameObj.worldToObject, float4(cameraParamsConst[0].position,1));
+        float3 cameraPositionObjSpace = (float3) mul(currGameObj.worldToObject, float4(cameraPosition,1));
         float3 pathDirObjSpace = (float3) mul(currGameObj.worldToObject, path.direction);
 
         // TODO: check for AABB intersections
