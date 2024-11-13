@@ -32,7 +32,7 @@ public struct MaterialData
     // ...
 }
 
-// TODO: break up vertex positions from other attributes
+// TODO: break up vertex positions from other attributes when expanded
 public struct Triangle
 {
     // you cannot do public Vector4 positions[3] in C#

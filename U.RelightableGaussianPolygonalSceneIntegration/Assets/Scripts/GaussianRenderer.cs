@@ -277,8 +277,6 @@ public class GaussianRenderer : MonoBehaviour
             }
         }
 
-        // TODO: potential synchronization problems where Blit is called before samplePathIntersections finishes writing to renderTexture
-
         commandBuffer.Blit(renderTexture, null as RenderTexture);
         cam.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
     }

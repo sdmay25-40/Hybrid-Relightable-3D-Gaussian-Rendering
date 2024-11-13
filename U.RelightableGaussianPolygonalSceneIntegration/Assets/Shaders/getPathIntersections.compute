@@ -34,7 +34,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         // TODO: check for AABB intersections
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
 
-        // TODO: precompute A,B,C,D potential perforamnce improvement (not always an improvement...)
         // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
         for (uint j = 0; j < aabb.triangleCount; j++)
         {
