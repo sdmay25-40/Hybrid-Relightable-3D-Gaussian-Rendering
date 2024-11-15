@@ -2,30 +2,28 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GaussianDisplay : MonoBehaviour
+public class RotatedGausianDisplay : MonoBehaviour
 {
-
     ComputeBuffer gBuffer;
 
     // Start is called before the first frame update
     void Start()
     {
-        Gaussian3D[] gaussians =  GaussianPlyParser.ReadGaussianFile("Assets/Resources/3D/SingleGaussian.ply");
-        Debug.Log(gaussians[0]);
+        BaseGaussian3D[] gaussians =  GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/3D/RotatedGaussian.ply");
 
-        Gaussian3D.PasssableGaussian3D[] pGaussians = new Gaussian3D.PasssableGaussian3D[gaussians.Length];
+        BaseGaussian3D.PasssableGaussian3D[] pGaussians = new BaseGaussian3D.PasssableGaussian3D[gaussians.Length];
         for(int i = 0; i < gaussians.Length; i++){
             pGaussians[i] = gaussians[i].GetPassableStruct();
         } 
 
         // Add Gaussians to buffer
-        gBuffer = new ComputeBuffer(gaussians.Length, (sizeof(float) * 3) + (sizeof(float) * 16 * 2) 
-            +  (sizeof(float) * 4));
+        gBuffer = new ComputeBuffer(gaussians.Length,  Gaussian3D.PassableGaussianSize);
 
         gBuffer.SetData(pGaussians);
 
         // Set data on GPU
-        Material m = Resources.Load("Materials/GaussianDemo/GaussianDemo") as Material;
+    
+        Material m = Instantiate(Resources.Load("Materials/GaussianDemo/GaussianDemo") as Material);;
         m.SetBuffer("gaussians", gBuffer);
         m.SetInt("numGaussians", gaussians.Length);
 

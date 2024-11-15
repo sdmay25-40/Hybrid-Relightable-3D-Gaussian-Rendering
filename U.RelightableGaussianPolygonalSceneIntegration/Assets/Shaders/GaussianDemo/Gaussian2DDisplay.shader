@@ -34,14 +34,37 @@ Shader "RGPSI/Gaussian2DDisplay"
                 
                 float4x4 invCov;
                 
-                //TODO: Expand this to be PBR materials when the .ply is updated
                 float4 color;
+                
+                // Index of Spherical harmonics coefficients in buffer
+                uint shCoefficientsIndex;
+                // Number of spherical harmonics coefficients
+                uint shCoefficientsNum;
+
+                float3 normal;
+
+                // PBR Propeties (Color is used for albedo)
+                float roughness;
+                float metalness;
+                float specular;
+                float opacity;
+                float ambientOcclusion;
+                float refraction;
+                float emissive;
+
+                /*
+                Used like an enum  to denote what type of Gaussian (in the .ply file) this is
+                0 = simpleGaussian3D
+                1 = gaussian3D
+                2 = relightableGaussian3D
+                */
+                uint gaussianType;
             };
 
             
             StructuredBuffer<Gaussian3D> gaussians;
-            int numGaussians;
-
+            uint numGaussians;
+            
             VertOut vert (appdata v)
             {
                 // Pass vertex information through
@@ -56,14 +79,15 @@ Shader "RGPSI/Gaussian2DDisplay"
                     // Find difference between Gaussian center and uv coordinates of this vertex
                     // NOTE: For the sake of this demo we are assuming the Gaussians are being described in 
                     // UV coordinates.
-                    float4 uv4 = float4(v.uv.x, v.uv.y, 0, 0);
-                    float4x1 x = uv4 - float4(currGaus.pos.x, currGaus.pos.y, 0, 0);
+                    float4 uv4 = float4(v.uv.x, v.uv.y, 0, 1);
+                    float4x1 x = float4(currGaus.pos.x, currGaus.pos.y, 0, 1) - uv4;
+                    x = abs(x);
                     
-                    float4 tmp = currGaus.invCov * x;
-                    float4 exponent = -0.5 * (transpose(x) * tmp);
+                    float4 intermediateX = mul(currGaus.invCov, x);
+                    float exponent = -0.5 * mul(transpose(x), intermediateX);
                     
-                    float g = pow(EULER_NUM, exponent.x);
-                    calculateColor += g * currGaus.color;
+                    float g = pow(EULER_NUM, exponent);
+                    calculateColor += currGaus.color * g;
                 }
 
                 o.color = calculateColor;
