@@ -1,0 +1,82 @@
+ply
+format ascii 1.0
+element simpleGaussian3D 4
+comment Coordinates in world space for the center of this Gaussians
+property float x
+property float y
+property float z
+comment Values used to construct a scale matrix for this gaussian
+property float xScale
+property float yScale
+property float zScale
+comment Quaternion values used to construct a rotation matrix for this gaussian
+property float qX
+property float qY
+property float qZ
+property float qW
+comment These two matrices togther can be used to create the covariance
+comment Color value of this Gaussian
+property float r
+property float g
+property float b
+property float a
+element gaussian3D 2
+comment Coordinates in world space for the center of this Gaussians
+property float x
+property float y
+property float z
+comment Values used to construct a scale matrix for this gaussian
+property float xScale
+property float yScale
+property float zScale
+comment Quaternion values used to construct a rotation matrix for this gaussian
+property float qX
+property float qY
+property float qZ
+property float qW
+comment These two matrices togther can be used to create the covariance
+property list uchar float coefficients for spherical harmonics
+element relightableGaussian3D 2
+comment Coordinates in world space for the center of this Gaussians
+property float x
+property float y
+property float z
+comment Values used to construct a scale matrix for this gaussian
+property float xScale
+property float yScale
+property float zScale
+comment Quaternion values used to construct a rotation matrix for this gaussian
+property float qX
+property float qY
+property float qZ
+property float qW
+comment These two matrices togther can be used to create the covariance
+comment Albedo color value of this Gaussian
+property float r
+property float g
+property float b
+property float a
+comment Elements of the Normal Vector for this Gaussian 
+property float nX 
+property float nY
+property float nZ 
+comment PBR properties
+property float roughness
+property float metalness
+property float specular
+property float opacity
+property float ambientOcclusion
+property float refraction
+property float emissive
+end header
+0.25 0.25 0 0.2 0.2 1 0 0 0 0 1 0 0 1
+0.25 0.75 0 0.2 0.2 1 0 0 0 0 0 1 0 1
+0.75 0.25 0 0.2 0.2 1 0 0 0 0 0 0 1 1
+0.75 0.75 0 0.2 0.2 1 0 0 0 0 1 1 0 1
+0 0 0 0.2 0.2 1 1 0 0 0 3 0.5 0.25 0.25
+1 0 0 0.2 0.2 1 1 0 0 0 3 0.5 0.25 0.25
+0.25 0.25 0 0.2 0.2 1 0 0 0 0 1 0 0 1 0 0 1 0.5 0.5 0.5 0.5 0.5 0.5 0.5
+0.25 0.75 0 0.2 0.2 1 0 0 0 0 1 0 0 1 0 0 1 0.5 0.5 0.5 0.5 0.5 0.5 0.5
+
+
+
