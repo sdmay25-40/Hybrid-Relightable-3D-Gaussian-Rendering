@@ -23,7 +23,6 @@ public class GaussianRenderer : MonoBehaviour
 {
     // references
     [SerializeField] private Camera cam;
-    [SerializeField] private ComputeShader fillBufferSequentially;
     [SerializeField] private ComputeShader generatePrimaryPaths;
     [SerializeField] private ComputeShader getPathIntersections;
     [SerializeField] private ComputeShader samplePathIntersections;
