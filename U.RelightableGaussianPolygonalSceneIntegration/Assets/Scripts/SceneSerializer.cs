@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
+// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 public struct GameObjectData
 {
     public Matrix4x4 objectToWorld;
@@ -160,17 +161,5 @@ public class SceneSerializer : MonoBehaviour
         commandBuffer.SetBufferData<AABB>(aabbsBuffer, aabbs);
         commandBuffer.SetBufferData<MaterialData>(materialDatasBuffer,materialDatas);
         commandBuffer.SetBufferData<Triangle>(trianglesBuffer, triangles);
-
-        // // debugging
-        // gameObjectDatasBuffer.SetData(gameObjectDatas.ToArray());
-        // aabbsBuffer.SetData(aabbs.ToArray());
-        // materialDatasBuffer.SetData(materialDatas.ToArray());
-        // trianglesBuffer.SetData(triangles.ToArray());
-        // Triangle[] data = new Triangle[trianglesBuffer.count];
-        // trianglesBuffer.GetData(data);
-        // for (int i = 0; i < trianglesBuffer.count; i++)
-        // {
-        //     Debug.Log($"Triangle[{i}]:\n   Index0: {data[i].position0}\n   Index1: {data[i].position1}\n   Index2: {data[i].position2}\n");
-        // }
     }
 }

@@ -157,15 +157,6 @@ public class GaussianRenderer : MonoBehaviour
     {
         commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
 
-        // // debugging
-        // pathsContinueCounter.SetCounterValue(0);
-        // pathsContinueTmpCounter.SetCounterValue(0);
-        // ComputeBuffer counterVal = new ComputeBuffer(1,sizeof(int),ComputeBufferType.Raw);
-        // ComputeBuffer.CopyCount(pathsContinueCounter,counterVal,0);
-        // int[] data = new int[1];
-        // counterVal.GetData(data);
-        // Debug.Log(data[0]);
-
         float workGroupX = 32.0f;
         int threadGroupX = Mathf.CeilToInt(paths.count / workGroupX);
 
@@ -177,30 +168,11 @@ public class GaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeIntParam(generatePrimaryPaths, "screenWidth", Screen.width);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
-            commandBuffer.SetComputeFloatParams(generatePrimaryPaths, "cameraPosition", new float[] {cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f});
-            commandBuffer.SetComputeFloatParams(generatePrimaryPaths, "cameraQuaternion", new float[] {cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w});
+            commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraPosition", new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f));
+            commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraQuaternion", new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w));
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
-
-            // // debugging
-            // generatePrimaryPaths.SetInt("pathCount", paths.count);
-            // generatePrimaryPaths.SetInt("pathsPerPixel", pathsPerPixel);
-            // generatePrimaryPaths.SetInt("screenWidth", Screen.width);
-            // generatePrimaryPaths.SetFloat("invScreenHeight", 1.0f / Screen.height);
-            // generatePrimaryPaths.SetFloat("tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
-            // generatePrimaryPaths.SetFloats("cameraPosition", new float[] {cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f});
-            // generatePrimaryPaths.SetFloats("cameraQuaternion", new float[] {cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w});
-            // generatePrimaryPaths.SetBuffer(kernelIndex, "pathsContinueCounter", pathsContinueCounter);
-            // generatePrimaryPaths.SetBuffer(kernelIndex, "paths", paths);
-            // generatePrimaryPaths.Dispatch(kernelIndex, threadGroupX, 1, 1);
-            // PathPayload[] data = new PathPayload[paths.count];
-            // paths.GetData(data);
-            // for (int i = 0; i < paths.count / 16; i++)
-            // {
-            //     PathPayload p = data[i*16];
-            //     Debug.DrawRay(new Vector3(p.origin.x, p.origin.y, p.origin.z), new Vector3(p.direction.x, p.direction.y, p.direction.z), Color.green, 20.0f);
-            // }
         }
 
         for(uint i = 0; i < pathBounceLimit; i++)
@@ -208,12 +180,6 @@ public class GaussianRenderer : MonoBehaviour
 
             commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
             commandBuffer.CopyCounterValue(pathsContinueCounter, pathsContinueCounterValue, 0);
-
-            // // debugging
-            // ComputeBuffer.CopyCount(pathsContinueCounter, pathsContinueCounterValue, 0);
-            // int[] data = new int[1];
-            // pathsContinueCounterValue.GetData(data);
-            // Debug.Log(data[0]);
 
             // get path intersections
             {
@@ -228,29 +194,10 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
-
-                // // debugging
-                // getPathIntersections.SetBuffer(kernelIndex, "paths", paths);
-                // getPathIntersections.SetBuffer(kernelIndex, "pathsContinueCounter", pathsContinueCounter);
-                // getPathIntersections.SetBuffer(kernelIndex, "pathsContinueCounterValue", pathsContinueCounterValue);
-                // getPathIntersections.SetBuffer(kernelIndex, "gameObjectDatas", gameObjectDatas);
-                // getPathIntersections.SetInt("gameObjectDataCount", gameObjectDataCount);
-                // getPathIntersections.SetBuffer(kernelIndex, "aabbs", aabbs);
-                // getPathIntersections.SetBuffer(kernelIndex, "triangles", triangles);
-                // getPathIntersections.SetBuffer(kernelIndex, "pathHitRecords", pathHitRecords);
-                // getPathIntersections.SetBuffer(kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
-                // getPathIntersections.Dispatch(kernelIndex, threadGroupX, 1, 1);
             }
 
             commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
             commandBuffer.CopyCounterValue(pathsContinueTmpCounter, pathsContinueTmpCounterValue, 0);
-
-
-            // // debugging
-            // ComputeBuffer.CopyCount(pathsContinueTmpCounter, pathsContinueTmpCounterValue, 0);
-            // int[] data1 = new int[1];
-            // pathsContinueTmpCounterValue.GetData(data1);
-            // Debug.Log(data1[0]);
 
             // sample path intersections
             {
@@ -263,16 +210,6 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "screenWidth", Screen.width);
                 commandBuffer.SetComputeTextureParam(samplePathIntersections, kernelIndex, "renderTexture", renderTexture);
                 commandBuffer.DispatchCompute(samplePathIntersections, kernelIndex, threadGroupX, 1, 1);
-
-                // // debugging
-                // samplePathIntersections.SetBuffer(kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
-                // samplePathIntersections.SetBuffer(kernelIndex, "pathsContinueTmpCounterValue", pathsContinueTmpCounterValue);
-                // samplePathIntersections.SetBuffer(kernelIndex, "pathHitRecords", pathHitRecords);
-                // samplePathIntersections.SetBuffer(kernelIndex, "materialDatas", materialDatas);
-                // samplePathIntersections.SetInt("pathsPerPixel", pathsPerPixel);
-                // samplePathIntersections.SetInt("screenWidth", Screen.width);
-                // samplePathIntersections.SetTexture(kernelIndex, "renderTexture", renderTexture);
-                // samplePathIntersections.Dispatch(kernelIndex, threadGroupX, 1, 1);
             }
         }
 

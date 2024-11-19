@@ -2,6 +2,7 @@
 #define EPSILON 0.001
 
 // when updating, ensure structs in 'Scripts/GaussianRenderer.cs' & 'Scripts/SceneSerializer' are updated to match
+// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 struct PathPayload
 {
     float4 direction;
