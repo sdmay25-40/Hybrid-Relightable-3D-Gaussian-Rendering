@@ -1,0 +1,29 @@
+#pragma kernel CSMain
+#include "utils.cginc"
+
+StructuredBuffer<uint> pathsContinueTmpCounter;
+StructuredBuffer<uint> pathsContinueTmpCounterValue;
+StructuredBuffer<PathHitRecord> pathHitRecords;
+StructuredBuffer<MaterialData> materialDatas;
+int pathsPerPixel;
+int screenWidth;
+// RWStructuredBuffer<uint> pathsContinueCounter;
+RWTexture2D<float4> renderTexture;
+
+[numthreads(32,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x > pathsContinueTmpCounterValue[0])
+    {
+        return;
+    }
+
+    uint pathId = pathsContinueTmpCounter[id.x];
+    PathHitRecord hitRecord = pathHitRecords[pathId];
+   
+    uint x = (uint) ((pathId / pathsPerPixel) % screenWidth);
+    uint y = (uint) ((pathId / pathsPerPixel) / screenWidth);
+    renderTexture[uint2(x,y)] = materialDatas[hitRecord.materialIndex].albedo;
+
+    // TODO: bounce ray
+}
