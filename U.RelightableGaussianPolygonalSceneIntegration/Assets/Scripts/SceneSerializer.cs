@@ -42,6 +42,7 @@ public struct Triangle
     // ...
 }
 
+
 public class SceneSerializer : MonoBehaviour
 {
     public static void GetSceneData(ref CommandBuffer commandBuffer, ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
