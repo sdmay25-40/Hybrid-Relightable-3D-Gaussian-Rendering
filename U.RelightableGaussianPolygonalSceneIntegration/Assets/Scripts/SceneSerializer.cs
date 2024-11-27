@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
+// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 public struct GameObjectData
 {
     public Matrix4x4 objectToWorld;
@@ -32,7 +33,7 @@ public struct MaterialData
     // ...
 }
 
-// TODO: break up vertex positions from other attributes
+// TODO: break up vertex positions from other attributes when expanded
 public struct Triangle
 {
     // you cannot do public Vector4 positions[3] in C#
@@ -63,6 +64,8 @@ public class SceneSerializer : MonoBehaviour
             Transform transform = meshRenderer.gameObject.transform;
             currGameObj.objectToWorld = transform.localToWorldMatrix;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
+            // Debug.Log(currGameObj.objectToWorld);
+            // Debug.Log(currGameObj.worldToObject);
 
             MeshFilter meshFilter = meshRenderer.gameObject.GetComponent<MeshFilter>();
             if (!meshFilter)
@@ -75,7 +78,7 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
-                // we are only creating one AABB per mesh so aabb is root
+                // we are only creating one AABB per mesh atm so aabb is root
                 aabbRootIndex = (uint)aabbs.Count; 
                 meshInstanceToAABB.Add(meshInstanceId, aabbs.Count);
 
@@ -159,17 +162,5 @@ public class SceneSerializer : MonoBehaviour
         commandBuffer.SetBufferData<AABB>(aabbsBuffer, aabbs);
         commandBuffer.SetBufferData<MaterialData>(materialDatasBuffer,materialDatas);
         commandBuffer.SetBufferData<Triangle>(trianglesBuffer, triangles);
-
-        // // debugging
-        // gameObjectDatasBuffer.SetData(gameObjectDatas.ToArray());
-        // aabbsBuffer.SetData(aabbs.ToArray());
-        // materialDatasBuffer.SetData(materialDatas.ToArray());
-        // trianglesBuffer.SetData(triangles.ToArray());
-        // Triangle[] data = new Triangle[trianglesBuffer.count];
-        // trianglesBuffer.GetData(data);
-        // for (int i = 0; i < trianglesBuffer.count; i++)
-        // {
-        //     Debug.Log($"Triangle[{i}]:\n   Index0: {data[i].position0}\n   Index1: {data[i].position1}\n   Index2: {data[i].position2}\n");
-        // }
     }
 }
