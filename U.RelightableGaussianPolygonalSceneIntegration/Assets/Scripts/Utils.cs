@@ -22,4 +22,11 @@ public static class Utils {
 
         return  new Vector3(xCent, yCent, zCent);
     }
+
+    /// <summary>
+    /// Convert a Vector3 to a Vector4 with the same xyz components and a w component of 1
+    /// </summary>
+    public static Vector4 Vec3ToVec4(Vector3 toCon){
+        return new Vector4(toCon.x, toCon.y, toCon.z, 1);
+    }
 }

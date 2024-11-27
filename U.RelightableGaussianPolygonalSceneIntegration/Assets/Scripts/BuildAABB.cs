@@ -13,7 +13,7 @@ public static class BuildAABB
     private static readonly float NUM_DIVISIONS = 8;
 
     /// <summary>
-    /// Determine the triangle position, AAB size, and cost of a split in an AABB 
+    /// Determine the triangle position, AAAB size, and cost of a split in an AABB 
     /// </summary>
     private static float DetermineSplit(Vector3 pos, int axis, Vector3[] verts, int[] triangles, int[] includedTriangleIdxs, 
     ref List<int> leftBoxTris, ref List<int> rightBoxTris, ref AABB left, ref AABB right){
@@ -32,7 +32,7 @@ public static class BuildAABB
             Vector3 vert3 = verts[triangles[tri] + 2];
             Vector3 centroid = Utils.CalcTriangleCentroid(vert1, vert2, vert3);
 
-            Boolean onLeft = false;
+            bool onLeft = false;
 
             // Split on the x Axis
             if(axis == 0){
@@ -86,35 +86,16 @@ public static class BuildAABB
         return cost;
     }
 
-    private static void DivideAABB(){
-        
-    }
-
-    public static void BuildAABBForMesh(MeshFilter mesh, ref List<AABB> aabbList){
-        // Get all centroids of triangles in this mesh
-        int[] tris = new int[mesh.sharedMesh.triangles.Length / 3];
-        Vector3[] triangleCentroids = new Vector3[mesh.sharedMesh.triangles.Length / 3];
-        for (int i =0; i < mesh.sharedMesh.triangles.Length / 3; i+=3){
-            int vert1Idx = mesh.sharedMesh.triangles[i];
-            int vert2Idx = mesh.sharedMesh.triangles[i + 1];
-            int vert3Idx = mesh.sharedMesh.triangles[i + 2];
-
-            Vector3 vert1 = mesh.sharedMesh.vertices[vert1Idx];
-            Vector3 vert2 = mesh.sharedMesh.vertices[vert2Idx];
-            Vector3 vert3 = mesh.sharedMesh.vertices[vert3Idx];
-
-            triangleCentroids[i / 3] =  Utils.CalcTriangleCentroid(vert1, vert2, vert3);
-            tris[i / 3] = i; 
-        }
-
-
+    private static void DivideAABB(Vector3[] triangleCentroids, MeshFilter mesh, int[] triangleIdxs, 
+        int divisionNum, ref AABB root, ref List<AABB> aabbList, ref List<Triangle> triangles){
         // Evaluate all possible splits (All three axis for every centroid)
         float lowestCost = float.MaxValue;
-        List<int> bestLeftTris;
-        List<int> bestRightTris;
-        AABB bestLeft;
-        AABB bestRight;
+        List<int> bestLeftTris = new List<int>();
+        List<int> bestRightTris = new List<int>();
+        AABB bestLeft = new AABB();
+        AABB bestRight = new AABB();
 
+    
         for(int i = 0; i < 3; i++){
             foreach(Vector3 cent in triangleCentroids){
                 List<int> leftTris = new List<int>();
@@ -122,9 +103,9 @@ public static class BuildAABB
                 AABB left = new AABB();
                 AABB right = new AABB();
 
-                // Determine the triangle position, AAB size, and cost of this split
+                // Determine the triangle position, AABB size, and cost of this split
                 float divCost = DetermineSplit(cent, i, mesh.sharedMesh.vertices, mesh.sharedMesh.triangles, 
-                    tris, ref leftTris, ref rightTris, ref left, ref right);
+                    triangleIdxs, ref leftTris, ref rightTris, ref left, ref right);
 
                 // If this split is the lowest cost update values to match for it 
                 if(divCost < lowestCost){
@@ -137,9 +118,94 @@ public static class BuildAABB
             }
         }
 
+        // Setup leaf nodes or subdivide further
+        if(divisionNum == NUM_DIVISIONS){
+            // Add left triangles to list
+            bestLeft.triangleCount = (uint) bestLeftTris.Count;
+            bestLeft.triangleStartIndex = (uint) triangles.Count;
+            for(int i = 0; i < bestLeftTris.Count; i++){
+                int vert0Idx = mesh.sharedMesh.triangles[bestLeftTris[i]];
+                int vert1Idx = mesh.sharedMesh.triangles[bestLeftTris[i] + 1];
+                int vert2Idx = mesh.sharedMesh.triangles[bestLeftTris[i] + 2];
 
+                Triangle tri = new Triangle();
+                tri.position0 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert0Idx]);
+                tri.position1 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert1Idx]);
+                tri.position2 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert2Idx]);
 
+                triangles.Add(tri);
+            }
 
-        
+            // Add right triangles to list
+            bestRight.triangleCount = (uint) bestRightTris.Count;
+            bestRight.triangleStartIndex = (uint) triangles.Count;
+            for(int i = 0; i < bestRightTris.Count; i++){
+                int vert0Idx = mesh.sharedMesh.triangles[bestRightTris[i]];
+                int vert1Idx = mesh.sharedMesh.triangles[bestRightTris[i] + 1];
+                int vert2Idx = mesh.sharedMesh.triangles[bestRightTris[i] + 2];
+
+                Triangle tri = new Triangle();
+                tri.position0 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert0Idx]);
+                tri.position1 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert1Idx]);
+                tri.position2 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert2Idx]);
+
+                triangles.Add(tri);
+            }
+
+            // Setup root
+            root.leftChildIndex = (uint) aabbList.Count;
+            aabbList.Add(bestLeft);
+            root.rightChildIndex = (uint) aabbList.Count;
+            aabbList.Add(bestRight);
+        }
+        else{
+            // Subdivide left and right 
+            bestLeft.triangleCount = uint.MaxValue;
+            DivideAABB(triangleCentroids, mesh, bestLeftTris.ToArray(), divisionNum + 1,
+                ref bestLeft, ref aabbList, ref triangles);
+            bestRight.triangleCount = uint.MaxValue;
+            DivideAABB(triangleCentroids, mesh, bestRightTris.ToArray(), divisionNum + 1,
+                ref bestRight, ref aabbList, ref triangles);
+            
+            // Setup root
+            root.leftChildIndex = (uint) aabbList.Count;
+            aabbList.Add(bestLeft);
+            root.rightChildIndex = (uint) aabbList.Count;
+            aabbList.Add(bestRight);
+        }
+    }
+
+    public static void BuildAABBForMesh(MeshFilter mesh, ref List<AABB> aabbList, ref List<Triangle> triangles){
+        // Get all centroids of triangles in this mesh and set min and max
+        int[] tris = new int[mesh.sharedMesh.triangles.Length / 3];
+        Vector3[] triangleCentroids = new Vector3[mesh.sharedMesh.triangles.Length / 3];
+
+        AABB root = new AABB();
+        root.min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        root.max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+
+        for (int i =0; i < mesh.sharedMesh.triangles.Length / 3; i+=3){
+            int vert0Idx = mesh.sharedMesh.triangles[i];
+            int vert1Idx = mesh.sharedMesh.triangles[i + 1];
+            int vert2Idx = mesh.sharedMesh.triangles[i + 2];
+
+            Vector3 vert0 = mesh.sharedMesh.vertices[vert0Idx];
+            Vector3 vert1 = mesh.sharedMesh.vertices[vert1Idx];
+            Vector3 vert2 = mesh.sharedMesh.vertices[vert2Idx];
+
+            root.min = Vector3.Min(root.min, vert0);
+            root.min = Vector3.Min(root.min, vert1);
+            root.min = Vector3.Min(root.min, vert2);
+            root.max = Vector3.Max(root.max, vert0);
+            root.max = Vector3.Max(root.max, vert1);
+            root.max = Vector3.Max(root.max, vert2);
+
+            triangleCentroids[i / 3] =  Utils.CalcTriangleCentroid(vert0, vert1, vert2);
+            tris[i / 3] = i; 
+        }
+
+        // Divide mesh
+        DivideAABB(triangleCentroids, mesh, tris, 0, ref root, ref aabbList, ref triangles); 
+        aabbList.Add(root);       
     }
 }

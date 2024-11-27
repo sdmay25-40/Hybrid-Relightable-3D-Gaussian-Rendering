@@ -82,42 +82,7 @@ public class SceneSerializer : MonoBehaviour
                 aabbRootIndex = (uint)aabbs.Count; 
                 meshInstanceToAABB.Add(meshInstanceId, aabbs.Count);
 
-                int[] meshTriangles = meshFilter.sharedMesh.triangles;
-
-                AABB aabb = new AABB();
-                aabb.triangleCount = (uint) meshTriangles.Length / 3;
-                aabb.triangleStartIndex = (uint) triangles.Count;
-
-                Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-                Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-
-                for(int i = 0; i < meshTriangles.Length; i+=3)
-                {
-                    Vector3 position0 = meshFilter.sharedMesh.vertices[meshTriangles[i]];
-                    Vector3 position1 = meshFilter.sharedMesh.vertices[meshTriangles[i+1]];
-                    Vector3 position2 = meshFilter.sharedMesh.vertices[meshTriangles[i+2]];
-                    // Debug.Log($"Triangle {i / 3}:\n    Vertex 0: {position0}\n    Vertex 1: {position1}\n    Vertex 2: {position2}\n\n");
-
-                    Triangle t;
-                    t.position0 = position0;
-                    t.position1 = position1;
-                    t.position2 = position2;
-                    triangles.Add(t);
-
-                    min = Vector3.Min(min, position0);
-                    min = Vector3.Min(min, position1);
-                    min = Vector3.Min(min, position2);
-                    max = Vector3.Max(max, position0);
-                    max = Vector3.Max(max, position1);
-                    max = Vector3.Max(max, position2);
-                }
-
-                aabb.min = min;
-                aabb.max = max;
-                aabb.leftChildIndex = uint.MaxValue;
-                aabb.rightChildIndex = uint.MaxValue;
-
-                aabbs.Add(aabb);
+                BuildAABB.BuildAABBForMesh(meshFilter, ref aabbs, ref triangles);
                 // Debug.Log($"AABB:\n    Min: {aabb.min}\n    Max: {aabb.max}\n    leftChildIndex: {aabb.leftChildIndex}\n    rightChildIndex: {aabb.rightChildIndex}\n    triangleCount: {aabb.triangleCount}\n    triangleStartIndex: {aabb.triangleStartIndex}\n\n");
             }
             else
