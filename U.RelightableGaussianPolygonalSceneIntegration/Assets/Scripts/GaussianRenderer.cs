@@ -78,7 +78,8 @@ public class GaussianRenderer : MonoBehaviour
 
     private void Update()
     {
-        // if camera moves or something moves in the scene...
+        // if camera moves or something moves in the scene update the buffers 
+
         // cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
         // commandBuffer.Clear();
         // BuildCommandBuffer();

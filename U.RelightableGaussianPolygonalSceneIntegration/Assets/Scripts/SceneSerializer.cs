@@ -45,7 +45,8 @@ public struct Triangle
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void GetSceneData(ref CommandBuffer commandBuffer, ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
+    // returns a list of GameObjects
+    public static List<GameObject> InitializeSceneDataBuffers(ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
     {
         List<GameObjectData> gameObjectDatas = new List<GameObjectData>();
         List<AABB> aabbs = new List<AABB>();
@@ -57,14 +58,11 @@ public class SceneSerializer : MonoBehaviour
         MeshRenderer[] meshRenderers = FindObjectsOfType<MeshRenderer>();
         foreach (MeshRenderer meshRenderer in meshRenderers)
         {
-            // Debug.Log(meshRenderer.gameObject.name);
             GameObjectData currGameObj = new GameObjectData();
 
             Transform transform = meshRenderer.gameObject.transform;
             currGameObj.objectToWorld = transform.localToWorldMatrix;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
-            // Debug.Log(currGameObj.objectToWorld);
-            // Debug.Log(currGameObj.worldToObject);
 
             MeshFilter meshFilter = meshRenderer.gameObject.GetComponent<MeshFilter>();
             if (!meshFilter)
@@ -95,7 +93,6 @@ public class SceneSerializer : MonoBehaviour
                     Vector3 position0 = meshFilter.sharedMesh.vertices[meshTriangles[i]];
                     Vector3 position1 = meshFilter.sharedMesh.vertices[meshTriangles[i+1]];
                     Vector3 position2 = meshFilter.sharedMesh.vertices[meshTriangles[i+2]];
-                    // Debug.Log($"Triangle {i / 3}:\n    Vertex 0: {position0}\n    Vertex 1: {position1}\n    Vertex 2: {position2}\n\n");
 
                     Triangle t;
                     t.position0 = position0;
@@ -117,7 +114,6 @@ public class SceneSerializer : MonoBehaviour
                 aabb.rightChildIndex = uint.MaxValue;
 
                 aabbs.Add(aabb);
-                // Debug.Log($"AABB:\n    Min: {aabb.min}\n    Max: {aabb.max}\n    leftChildIndex: {aabb.leftChildIndex}\n    rightChildIndex: {aabb.rightChildIndex}\n    triangleCount: {aabb.triangleCount}\n    triangleStartIndex: {aabb.triangleStartIndex}\n\n");
             }
             else
             {
@@ -137,7 +133,6 @@ public class SceneSerializer : MonoBehaviour
 
                 MaterialData materialData = new MaterialData();
                 materialData.albedo = new Vector4(albedo.r, albedo.g, albedo.b, albedo.a);
-                // Debug.Log($"Color: {materialData.albedo}");
 
                 materialDatas.Add(materialData);
             }
@@ -157,9 +152,11 @@ public class SceneSerializer : MonoBehaviour
         materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
         trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
 
-        commandBuffer.SetBufferData<GameObjectData>(gameObjectDatasBuffer, gameObjectDatas);
-        commandBuffer.SetBufferData<AABB>(aabbsBuffer, aabbs);
-        commandBuffer.SetBufferData<MaterialData>(materialDatasBuffer,materialDatas);
-        commandBuffer.SetBufferData<Triangle>(trianglesBuffer, triangles);
+        gameObjectDatasBuffer.SetData(gameObjectDatas);
+        aabbsBuffer.SetData(aabbs);
+        materialDatasBuffer.SetData(materialDatas);
+        trianglesBuffer.SetData(triangles);
+
+        return null;
     }
 }
