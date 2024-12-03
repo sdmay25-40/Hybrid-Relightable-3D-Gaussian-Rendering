@@ -41,6 +41,7 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
     private ComputeBuffer gameObjectDatas;
+    private ComputeBuffer cameraData;
     private MeshRenderer[] meshRenderers;
     private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
 
@@ -73,7 +74,7 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
-        SceneSerializer.InitializeSceneDataBuffers(ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles);
         BuildCommandBuffer();
     }
 
@@ -82,7 +83,7 @@ public class GaussianRenderer : MonoBehaviour
         // if camera moves or something moves in the scene update the buffers 
         if (true)
         {
-            SceneSerializer.UpdateSceneDataBuffer(meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
+            SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
         }
     }
 
@@ -129,6 +130,11 @@ public class GaussianRenderer : MonoBehaviour
             pathsContinueTmpCounterValue.Release();
             pathsContinueTmpCounterValue = null;
         }
+        if (cameraData != null)
+        {
+            cameraData.Release();
+            cameraData = null;
+        }
         if (gameObjectDatas != null)
         {
             gameObjectDatas.Release();
@@ -174,8 +180,7 @@ public class GaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeIntParam(generatePrimaryPaths, "screenWidth", Screen.width);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
-            commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraPosition", new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f));
-            commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraQuaternion", new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w));
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraData", cameraData);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);

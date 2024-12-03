@@ -44,12 +44,25 @@ public struct Triangle
     // ...
 }
 
+public struct CameraData
+{
+    public Vector4 position;
+    public Vector4 quaternion;
+}
+
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
     {
-        // TODO: create a camera buffer (position and quaternion) so it can be updated later
-        
+        // init camera buffer        
+        cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
+        CameraData camData = new CameraData
+        {
+            position = new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f),
+            quaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
+        };
+        cameraData.SetData(new CameraData[]{camData});
+
         List<AABB> aabbs = new List<AABB>();
         List<MaterialData> materialDatas = new List<MaterialData>();
         List<Triangle> triangles = new List<Triangle>();
@@ -158,8 +171,15 @@ public class SceneSerializer : MonoBehaviour
     }
 
     // can be expanded to update all necessary scene data (lights, camera, ...)
-    public static void UpdateSceneDataBuffer(in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
+    public static void UpdateSceneDataBuffer(in Camera cam, ref ComputeBuffer cameraData, in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
     {
+        CameraData camData = new CameraData
+        {
+            position = new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f),
+            quaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
+        };
+        cameraData.SetData(new CameraData[]{camData});
+
         for (int i = 0; i < meshRenderers.Length; i++)
         {
             GameObjectData currGameObj = gameObjectDatas[i];
@@ -168,7 +188,6 @@ public class SceneSerializer : MonoBehaviour
             currGameObj.worldToObject = transform.worldToLocalMatrix;
             gameObjectDatas[i] = currGameObj;
         }
-
         gameObjectDatasBuffer.SetData(gameObjectDatas);
     }
 }

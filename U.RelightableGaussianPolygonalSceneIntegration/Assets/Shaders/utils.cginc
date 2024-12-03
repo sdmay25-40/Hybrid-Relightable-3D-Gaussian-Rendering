@@ -47,6 +47,12 @@ struct Triangle
     float4 positions[3];
 };
 
+struct CameraData
+{
+    float4 position;
+    float4 quaternion;
+};
+
 /// <source> https://www.songho.ca/opengl/gl_quaternion.html </source>
 /// <summary> Converts a normalized quaternion to a rotation matrix.</summary>
 float3x3 quatToRotMatrix(float4 q)
