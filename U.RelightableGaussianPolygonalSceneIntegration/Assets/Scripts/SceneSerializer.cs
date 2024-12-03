@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -45,17 +46,17 @@ public struct Triangle
 
 public class SceneSerializer : MonoBehaviour
 {
-    // returns a list of GameObjects
-    public static List<GameObject> InitializeSceneDataBuffers(ref ComputeBuffer gameObjectDatasBuffer, ref int gameObjectDataCount, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
+    public static void InitializeSceneDataBuffers(ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
     {
-        List<GameObjectData> gameObjectDatas = new List<GameObjectData>();
+        // TODO: create a camera buffer (position and quaternion) so it can be updated later
+        
         List<AABB> aabbs = new List<AABB>();
         List<MaterialData> materialDatas = new List<MaterialData>();
         List<Triangle> triangles = new List<Triangle>();
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
-        MeshRenderer[] meshRenderers = FindObjectsOfType<MeshRenderer>();
+        meshRenderers = FindObjectsOfType<MeshRenderer>();
         foreach (MeshRenderer meshRenderer in meshRenderers)
         {
             GameObjectData currGameObj = new GameObjectData();
@@ -71,7 +72,7 @@ public class SceneSerializer : MonoBehaviour
             }
 
             // create AABB for each unique mesh
-            uint aabbRootIndex = uint.MaxValue;
+            uint aabbRootIndex;
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
@@ -122,7 +123,7 @@ public class SceneSerializer : MonoBehaviour
             currGameObj.aabbRootIndex = aabbRootIndex;
 
             // create material data for each unique material
-            uint materialIndex = uint.MaxValue;
+            uint materialIndex;
             int materialInstanceId = meshRenderer.sharedMaterial.GetInstanceID();
             if (!materialInstanceToMaterialData.ContainsKey(materialInstanceId))
             {
@@ -145,8 +146,6 @@ public class SceneSerializer : MonoBehaviour
             gameObjectDatas.Add(currGameObj);
         }
 
-        gameObjectDataCount = gameObjectDatas.Count;
-
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
         aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
         materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
@@ -156,7 +155,20 @@ public class SceneSerializer : MonoBehaviour
         aabbsBuffer.SetData(aabbs);
         materialDatasBuffer.SetData(materialDatas);
         trianglesBuffer.SetData(triangles);
+    }
 
-        return null;
+    // can be expanded to update all necessary scene data (lights, camera, ...)
+    public static void UpdateSceneDataBuffer(in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
+    {
+        for (int i = 0; i < meshRenderers.Length; i++)
+        {
+            GameObjectData currGameObj = gameObjectDatas[i];
+            Transform transform = meshRenderers[i].gameObject.transform;
+            currGameObj.objectToWorld = transform.localToWorldMatrix;
+            currGameObj.worldToObject = transform.worldToLocalMatrix;
+            gameObjectDatas[i] = currGameObj;
+        }
+
+        gameObjectDatasBuffer.SetData(gameObjectDatas);
     }
 }
