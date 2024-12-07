@@ -19,6 +19,18 @@ public struct PathHitRecord
     public uint materialIndex;
 }
 
+struct StackNode{
+    // Whether or not this stack node is currently on the stack
+    // 0 = false (Not valid), 1 = true (valid)
+    uint valid;
+    // The data this node contains
+    uint data;
+    // The index of the next node in the stack in the backing array. 
+    // If this node is at the bottom if the stack this will be STACK_MAX_SIZE
+    uint nextIndex;
+};
+
+
 public class GaussianRenderer : MonoBehaviour
 {
     // references
@@ -41,6 +53,8 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
     private ComputeBuffer gameObjectDatas;
+    private ComputeBuffer stackBuffer;
+    private ComputeBuffer debugBuffer;
     private int gameObjectDataCount;
 
     private void Awake()
@@ -68,6 +82,8 @@ public class GaussianRenderer : MonoBehaviour
         pathsContinueCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsContinueTmpCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
+        stackBuffer = new ComputeBuffer(pathCount * 500, Marshal.SizeOf(typeof(StackNode)));
+        debugBuffer = new ComputeBuffer(paths.count, sizeof(float));
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
@@ -78,6 +94,9 @@ public class GaussianRenderer : MonoBehaviour
 
     private void Update()
     {
+        float[] debugList = new float[paths.count];
+        debugBuffer.GetData(debugList);
+        Debug.Log(debugList[0]);
         // if camera moves or something moves in the scene...
         // cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
         // commandBuffer.Clear();
@@ -147,6 +166,10 @@ public class GaussianRenderer : MonoBehaviour
             triangles.Release();
             triangles = null;
         }
+        if(stackBuffer != null){
+            stackBuffer.Release();
+            stackBuffer = null;
+        }
     }
 
     /// <summary>
@@ -193,6 +216,8 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "triangles", triangles);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "debugBuffer", debugBuffer);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "stackBuffer", stackBuffer);
                 commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
 

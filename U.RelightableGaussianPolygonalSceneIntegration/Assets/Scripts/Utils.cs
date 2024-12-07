@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -28,5 +31,35 @@ public static class Utils {
     /// </summary>
     public static Vector4 Vec3ToVec4(Vector3 toCon){
         return new Vector4(toCon.x, toCon.y, toCon.z, 1);
+    }
+
+    public static string AABBToString(AABB bb){
+        return "{Max: " + bb.max + ", Min: " + bb.min + " Count:" + bb.triangleCount + "}";
+    }
+
+    public static void WriteBVHToFile(List<AABB> toWrite, int rootIndex){
+        string bvhStr = "";
+
+        List<AABB> currLevel = new List<AABB>();
+        List<AABB> lastLevel = new List<AABB>();
+        lastLevel.Add(toWrite[rootIndex]);
+        bvhStr += AABBToString(toWrite[0]) + "\n";
+
+        while(lastLevel[0].triangleCount == uint.MaxValue){
+            // For every AABB processed last iteration
+            foreach(AABB bb in lastLevel){
+                // Process children
+                bvhStr += AABBToString(toWrite[(int) bb.leftChildIndex]) + " ";
+                currLevel.Add(toWrite[(int) bb.leftChildIndex]);
+
+                bvhStr += AABBToString(toWrite[(int) bb.rightChildIndex]) + " ";
+                currLevel.Add(toWrite[(int) bb.rightChildIndex]);
+            }
+            lastLevel = currLevel;
+            currLevel = new List<AABB>();
+            bvhStr += "\n";
+        }
+
+        File.WriteAllText("bvhDebug.txt", bvhStr);
     }
 }

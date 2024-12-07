@@ -78,11 +78,11 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
+                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles);
+
                 // we are only creating one AABB per mesh atm so aabb is root
-                aabbRootIndex = (uint)aabbs.Count; 
                 meshInstanceToAABB.Add(meshInstanceId, aabbs.Count);
 
-                BuildAABB.BuildAABBForMesh(meshFilter, ref aabbs, ref triangles);
                 // Debug.Log($"AABB:\n    Min: {aabb.min}\n    Max: {aabb.max}\n    leftChildIndex: {aabb.leftChildIndex}\n    rightChildIndex: {aabb.rightChildIndex}\n    triangleCount: {aabb.triangleCount}\n    triangleStartIndex: {aabb.triangleStartIndex}\n\n");
             }
             else
