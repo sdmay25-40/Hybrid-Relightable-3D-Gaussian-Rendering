@@ -8,7 +8,9 @@ using UnityEngine.Rendering;
 public struct PathPayload
 {
     public Vector4 direction;
-    public Vector4 origin;
+    public Vector3 origin;
+    public uint bounce;
+    public Vector4 throughput;
 }
 
 public struct PathHitRecord
@@ -17,6 +19,7 @@ public struct PathHitRecord
     public float u;
     public float v;
     public uint materialIndex;
+    public Vector4 normal;
 }
 
 public class GaussianRenderer : MonoBehaviour
@@ -80,7 +83,7 @@ public class GaussianRenderer : MonoBehaviour
 
     private void Update()
     {
-        // if camera moves or something moves in the scene update the buffers 
+        // TODO: if camera moves or something moves in the scene update the buffers 
         if (true)
         {
             SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
@@ -218,6 +221,8 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "materialDatas", materialDatas);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "pathsPerPixel", pathsPerPixel);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "screenWidth", Screen.width);
+                commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounceLimit", pathBounceLimit);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "paths", paths);
                 commandBuffer.SetComputeTextureParam(samplePathIntersections, kernelIndex, "renderTexture", renderTexture);
                 commandBuffer.DispatchCompute(samplePathIntersections, kernelIndex, threadGroupX, 1, 1);
             }

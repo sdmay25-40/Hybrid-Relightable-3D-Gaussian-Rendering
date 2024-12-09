@@ -7,6 +7,8 @@ StructuredBuffer<PathHitRecord> pathHitRecords;
 StructuredBuffer<MaterialData> materialDatas;
 int pathsPerPixel;
 int screenWidth;
+int pathBounceLimit;
+RWStructuredBuffer<PathPayload> paths;
 // RWStructuredBuffer<uint> pathsContinueCounter;
 RWTexture2D<float4> renderTexture;
 
@@ -20,10 +22,24 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     uint pathId = pathsContinueTmpCounter[id.x];
     PathHitRecord hitRecord = pathHitRecords[pathId];
-   
-    uint x = (uint) ((pathId / pathsPerPixel) % screenWidth);
-    uint y = (uint) ((pathId / pathsPerPixel) / screenWidth);
-    renderTexture[uint2(x,y)] = materialDatas[hitRecord.materialIndex].albedo;
 
-    // TODO: bounce ray
+    MaterialData materialData = materialDatas[hitRecord.materialIndex];
+    if (materialData.type == 1) // emissive
+    {
+        // write to texture
+        uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
+        renderTexture[pixelIndex] = dot(paths[pathId].throughput, materialData.albedo);
+        return;
+    }
+
+    if (paths[pathId].bounce >= (uint)pathBounceLimit)
+    {
+        return;
+    }
+
+    // Lambertain Diffuse
+
+    // TODO: gen new dir
+
+    // TODO: if bounce, new origin + bounce + add to continue
 }

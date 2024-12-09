@@ -28,7 +28,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     for (int i = 0; i < gameObjectDataCount; i++)
     {
         GameObjectData currGameObj = gameObjectDatas[i];
-        float3 pathOriginObjSpace = (float3) mul(currGameObj.worldToObject, path.origin);
+        float3 pathOriginObjSpace = (float3) mul(currGameObj.worldToObject, float4(path.origin,1));
         float3 pathDirObjSpace = (float3) mul(currGameObj.worldToObject, path.direction);
 
         // TODO: check for AABB intersections
@@ -72,6 +72,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 closestHit.u = u;
                 closestHit.v = v;
                 closestHit.materialIndex = currGameObj.materialIndex;
+                closestHit.normal = mul(currGameObj.objectToWorld, float4(normalize(cross(aToB, aToC)), 0));
             }
         }
     }

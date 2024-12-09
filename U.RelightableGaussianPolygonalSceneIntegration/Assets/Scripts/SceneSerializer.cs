@@ -29,6 +29,8 @@ public struct AABB
 public struct MaterialData
 {
     public Vector4 albedo;
+    public uint type;
+    private Vector3 padding;
     // float metallic;
     // float roughness;
     // ...
@@ -143,10 +145,23 @@ public class SceneSerializer : MonoBehaviour
                 materialIndex = (uint)materialDatas.Count;
                 materialInstanceToMaterialData.Add(materialInstanceId, materialDatas.Count);
 
-                Color albedo = meshRenderer.sharedMaterial.GetColor("_Color");
+                Material meshMaterial = meshRenderer.sharedMaterial;
+
+                uint materialType = 0;
+                Color albedo = meshMaterial.GetColor("_Color");
+                if (meshMaterial.IsKeywordEnabled("_EMISSION"))
+                {
+                    Color emissionColor = meshMaterial.GetColor("_EmissionColor");
+                    if (emissionColor != Color.black)
+                    {
+                        materialType = 1;
+                        albedo = emissionColor;
+                    }
+                }
 
                 MaterialData materialData = new MaterialData();
                 materialData.albedo = new Vector4(albedo.r, albedo.g, albedo.b, albedo.a);
+                materialData.type = materialType;
 
                 materialDatas.Add(materialData);
             }

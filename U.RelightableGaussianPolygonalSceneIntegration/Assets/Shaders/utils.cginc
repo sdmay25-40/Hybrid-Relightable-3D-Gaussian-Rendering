@@ -6,7 +6,9 @@
 struct PathPayload
 {
     float4 direction;
-    float4 origin;
+    float3 origin;
+    uint bounce;
+    float4 throughput;
 };
 
 struct PathHitRecord
@@ -15,6 +17,7 @@ struct PathHitRecord
     float u;
     float v;
     uint materialIndex;
+    float4 normal;
 };
 
 struct GameObjectData
@@ -40,6 +43,8 @@ struct AABB
 struct MaterialData
 {
     float4 albedo;
+    uint type;
+    float3 padding;
 };
 
 struct Triangle
@@ -65,4 +70,23 @@ float3x3 quatToRotMatrix(float4 q)
         // row 3
         (2 * q.x * q.z - 2 * q.y * q.w), (2 * q.y * q.z + 2 * q.x * q.w), (1 - 2 * q.x * q.x - 2 * q.y * q.y)
     );
+}
+
+uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)
+{
+    uint x = (uint) ((pathId / pathsPerPixel) % screenWidth);
+    uint y = (uint) ((pathId / pathsPerPixel) / screenWidth);
+    return uint2(x,y);
+}
+
+float random(float2 uv)
+{
+    return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+float2 generateRandomSample(float2 uv)
+{
+    float rand1 = random(uv);
+    float rand2 = random(uv + float2(1.0, 0.0));
+    return float2(rand1, rand2);
 }
