@@ -155,9 +155,9 @@ public static class BuildBVH
             }
 
             // Setup root
-            root.leftChildIndex = (uint) aabbList.Count + 1;
+            root.leftChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestLeft);
-            root.rightChildIndex = (uint) aabbList.Count + 1;
+            root.rightChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestRight);
         }
         else{
@@ -170,9 +170,9 @@ public static class BuildBVH
                 ref bestRight, ref aabbList, ref triangles);
             
             // Setup root
-            root.leftChildIndex = (uint) aabbList.Count + 1;
+            root.leftChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestLeft);
-            root.rightChildIndex = (uint) aabbList.Count + 1;
+            root.rightChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestRight);
         }
     }

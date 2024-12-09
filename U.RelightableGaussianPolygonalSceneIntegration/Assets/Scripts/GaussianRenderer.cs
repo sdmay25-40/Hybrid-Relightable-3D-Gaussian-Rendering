@@ -96,7 +96,8 @@ public class GaussianRenderer : MonoBehaviour
     {
         float[] debugList = new float[paths.count];
         debugBuffer.GetData(debugList);
-        Debug.Log(debugList[0]);
+        Debug.Log("0: " + debugList[0]);
+        Debug.Log("1: " + debugList[1]);
         // if camera moves or something moves in the scene...
         // cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
         // commandBuffer.Clear();

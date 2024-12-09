@@ -34,7 +34,8 @@ public static class Utils {
     }
 
     public static string AABBToString(AABB bb){
-        return "{Max: " + bb.max + ", Min: " + bb.min + " Count:" + bb.triangleCount + "}";
+        return "{Max: " + bb.max + ", Min: " + bb.min + " Count:" + bb.triangleCount + ", Left Child Index"
+            + bb.leftChildIndex + ", Right Child Index: " + bb.rightChildIndex;
     }
 
     public static void WriteBVHToFile(List<AABB> toWrite, int rootIndex){
@@ -43,7 +44,7 @@ public static class Utils {
         List<AABB> currLevel = new List<AABB>();
         List<AABB> lastLevel = new List<AABB>();
         lastLevel.Add(toWrite[rootIndex]);
-        bvhStr += AABBToString(toWrite[0]) + "\n";
+        bvhStr += AABBToString(toWrite[rootIndex]) + "\n";
 
         while(lastLevel[0].triangleCount == uint.MaxValue){
             // For every AABB processed last iteration

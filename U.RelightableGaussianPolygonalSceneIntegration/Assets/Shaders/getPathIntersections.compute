@@ -120,19 +120,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
         s = stackReset(s, id.x);
         s = stackPush(s, currGameObj.aabbRootIndex);
-
-        uint k = 0;
-
-        while(s.size > 0 && k < 10000){
+        int k =0;
+        while(s.size > 0 && k < 100000){
             AABB aabb = aabbs[stackPeek(s)];
 
             if(rayAABBIntersect(path, aabb)){
                 // If this is a leaf node
+                // TODO: Make this an actual value instead of this arbitrary number for testing
                 if(aabb.triangleCount < 1000000){
                     // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-                    /*
+                    
                     for (uint j = 0; j < aabb.triangleCount; j++)
                     {
+                        debugBuffer[0] = 3;
                         Triangle tri = triangles[aabb.triangleStartIndex + j];
                         float3 aToB = (float3) (tri.positions[1] - tri.positions[0]);
                         float3 aToC = (float3) (tri.positions[2] - tri.positions[0]);
@@ -170,7 +170,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                             closestHit.materialIndex = currGameObj.materialIndex;
                         }
                     }
-                    */
                 }
                 // If this is a tree node
                 else{
@@ -182,14 +181,17 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             // Remove this node from the stack
             s = stackPop(s);
-
+            
             k++;
-
-            if(k == 10000){
-                debugBuffer[0] = s.topIndex;
-            }
         }
+
+        if(s.size != 0){
+            debugBuffer[1] = 3;
+        }
+        
     }
+
+
     
     if (closestHit.t < FLT_MAX)
     {

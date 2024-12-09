@@ -115,7 +115,8 @@ public class SceneSerializer : MonoBehaviour
 
             gameObjectDatas.Add(currGameObj);
         }
-
+        Utils.WriteBVHToFile(aabbs, (int) gameObjectDatas[0].aabbRootIndex);
+        
         gameObjectDataCount = gameObjectDatas.Count;
 
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));

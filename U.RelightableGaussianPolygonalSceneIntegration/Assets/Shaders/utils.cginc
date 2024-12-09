@@ -67,7 +67,10 @@ float3x3 quatToRotMatrix(float4 q)
 // Check if a ray intersects a bounding box. 
 bool rayAABBIntersect(PathPayload path, AABB b){
 
-    // TODO: If this aab is empty don't intersect 
+    // TODO: This can probably be removed once AABB construction has been improved 
+    if(b.triangleCount == 0){
+        return false;
+    }
 
     // TODO: Confirm this is the best (most efficient) AABB intersection method
     float3 dirfrac;
