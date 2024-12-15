@@ -1,6 +1,7 @@
 #pragma kernel CSMain
 #include "utils.cginc"
 
+StructuredBuffer<uint> frameIndex;
 StructuredBuffer<uint> pathsContinueTmpCounter;
 StructuredBuffer<uint> pathsContinueTmpCounterValue;
 StructuredBuffer<PathHitRecord> pathHitRecords;
@@ -9,10 +10,10 @@ int pathsPerPixel;
 int screenWidth;
 int pathBounceLimit;
 RWStructuredBuffer<PathPayload> paths;
-// RWStructuredBuffer<uint> pathsContinueCounter;
+RWStructuredBuffer<uint> pathsContinueCounter;
 RWTexture2D<float4> renderTexture;
 
-[numthreads(32,1,1)]
+[numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     if (id.x > pathsContinueTmpCounterValue[0])
@@ -24,11 +25,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     PathHitRecord hitRecord = pathHitRecords[pathId];
 
     MaterialData materialData = materialDatas[hitRecord.materialIndex];
+    uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
+
     if (materialData.type == 1) // emissive
     {
         // write to texture
-        uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
-        renderTexture[pixelIndex] = dot(paths[pathId].throughput, materialData.albedo);
+        // float invPathsPerPixel = 1.0 / pathsPerPixel;
+        // renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo * invPathsPerPixel;
+        renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo;
         return;
     }
 
@@ -37,9 +41,21 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // Lambertain Diffuse
+    // add normal offset to avoid collision with the same object
+    paths[pathId].origin += float3((hitRecord.t * paths[pathId].direction + hitRecord.normal * EPSILON).xyz);
 
-    // TODO: gen new dir
+    // TODO: add a frame index
 
-    // TODO: if bounce, new origin + bounce + add to continue
+    // cosine weighted sample accounts for Lambert's Law, path continue count is the seed
+    int seed = getSeed(pathId, paths[pathId].bounce, frameIndex[0]);
+    float3 reflect = randCosHemisphereSample(hitRecord.normal.xyz, pixelIndex, seed);
+    paths[pathId].direction = float4(reflect, 0);
+    paths[pathId].bounce++;
+
+    // Lambertian Diffuse BRDF
+    paths[pathId].throughput *= materialData.albedo / PI;
+   
+    // add path to continue
+    uint prevIndex = pathsContinueCounter.IncrementCounter();
+    pathsContinueCounter[prevIndex] = pathId;
 }
