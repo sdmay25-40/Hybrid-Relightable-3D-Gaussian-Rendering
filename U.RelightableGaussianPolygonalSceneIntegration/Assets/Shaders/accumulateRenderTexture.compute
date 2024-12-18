@@ -1,0 +1,23 @@
+#pragma kernel CSMain
+
+int screenWidth;
+int screenHeight;
+StructuredBuffer<uint> frameIndex;
+Texture2D<float4> renderTexture;
+RWTexture2D<float4> accumulationTexture;
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) screenWidth || id.y >= (uint) screenHeight)
+    {
+        return;
+    }
+
+    float4 currentColor = renderTexture[id.xy];
+    float4 accumulatedColor = accumulationTexture[id.xy];
+    float t = 1.0 / (frameIndex[0] + 1);
+    float4 blendedColor = lerp(accumulatedColor, currentColor, t);
+    
+    accumulationTexture[id.xy] = blendedColor;
+}

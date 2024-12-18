@@ -231,8 +231,10 @@ MonoBehaviour:
   generatePrimaryPaths: {fileID: 7200000, guid: 69c3dbaab43622a4c81192cb21511835, type: 3}
   getPathIntersections: {fileID: 7200000, guid: c4c64515e8d610d489bd6295a2b11c26, type: 3}
   samplePathIntersections: {fileID: 7200000, guid: ed12c8c072e50d2418e75410e00ee8f7, type: 3}
+  accumulateRenderTexture: {fileID: 7200000, guid: 1befd23c6be3f1042ab62ed1ab848812, type: 3}
+  increment: {fileID: 7200000, guid: 0279ba4e513d1b948a98c4db32c23882, type: 3}
   pathsPerPixel: 4
-  pathBounceLimit: 10
+  pathBounceLimit: 1
 --- !u!1 &2009103650
 GameObject:
   m_ObjectHideFlags: 0

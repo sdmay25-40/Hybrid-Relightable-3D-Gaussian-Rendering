@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System.Security.Cryptography;
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
@@ -29,6 +30,8 @@ public class GaussianRenderer : MonoBehaviour
     [SerializeField] private ComputeShader generatePrimaryPaths;
     [SerializeField] private ComputeShader getPathIntersections;
     [SerializeField] private ComputeShader samplePathIntersections;
+    [SerializeField] private ComputeShader accumulateRenderTexture;
+    [SerializeField] private ComputeShader increment;
     // settings
     [SerializeField] private int pathsPerPixel = 1;
     [SerializeField] private int pathBounceLimit = 1;
@@ -253,11 +256,26 @@ public class GaussianRenderer : MonoBehaviour
         }
 
         // accumulate render texture
+        {
+            int kernelIndex = accumulateRenderTexture.FindKernel("CSMain");
+            int threadGroupsX = Mathf.CeilToInt((float)renderTexture.width / 32);
+            int threadGroupsY = Mathf.CeilToInt((float)renderTexture.height / 32);
+            commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenWidth", Screen.width);
+            commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenHeight", Screen.height);
+            commandBuffer.SetComputeBufferParam(accumulateRenderTexture, kernelIndex, "frameIndex", frameIndex);
+            commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "renderTexture", renderTexture);
+            commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "accumulationTexture", accumulationTexture);
+            commandBuffer.DispatchCompute(accumulateRenderTexture, kernelIndex, threadGroupsX, threadGroupsY, 1);
+        }
 
-        // show buffer
-        commandBuffer.Blit(renderTexture, null as RenderTexture);
+        commandBuffer.Blit(accumulationTexture, null as RenderTexture);
 
         // increment frame index
+        {
+            int kernelIndex = increment.FindKernel("CSMain");
+            commandBuffer.SetComputeBufferParam(increment, kernelIndex, "buffer", frameIndex);
+            commandBuffer.DispatchCompute(increment, kernelIndex, 1, 1, 1);
+        }
 
         cam.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
     }

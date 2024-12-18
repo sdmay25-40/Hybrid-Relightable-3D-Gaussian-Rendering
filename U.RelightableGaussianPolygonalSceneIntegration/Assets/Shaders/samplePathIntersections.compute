@@ -27,35 +27,36 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     MaterialData materialData = materialDatas[hitRecord.materialIndex];
     uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
 
-    if (materialData.type == 1) // emissive
-    {
-        // write to texture
-        // float invPathsPerPixel = 1.0 / pathsPerPixel;
-        // renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo * invPathsPerPixel;
-        renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo;
-        return;
-    }
+    float invPathsPerPixel = 1.0 / (pathsPerPixel - 1);
+    renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo * invPathsPerPixel;
+    // TODO: I think the += is our issue here because the add is not immediate
 
-    if (paths[pathId].bounce >= (uint)pathBounceLimit)
-    {
-        return;
-    }
+    // if (materialData.type == 1) // emissive
+    // {
+    //     // write to texture
+    //     float invPathsPerPixel = 1.0 / (pathsPerPixel - 1);
+    //     renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo * invPathsPerPixel;
+    //     return;
+    // }
 
-    // add normal offset to avoid collision with the same object
-    paths[pathId].origin += float3((hitRecord.t * paths[pathId].direction + hitRecord.normal * EPSILON).xyz);
+    // if (paths[pathId].bounce >= (uint)pathBounceLimit)
+    // {
+    //     return;
+    // }
 
-    // TODO: add a frame index
+    // // add normal offset to avoid collision with the same object
+    // paths[pathId].origin += float3((hitRecord.t * paths[pathId].direction + hitRecord.normal * EPSILON).xyz);
 
-    // cosine weighted sample accounts for Lambert's Law, path continue count is the seed
-    int seed = getSeed(pathId, paths[pathId].bounce, frameIndex[0]);
-    float3 reflect = randCosHemisphereSample(hitRecord.normal.xyz, pixelIndex, seed);
-    paths[pathId].direction = float4(reflect, 0);
-    paths[pathId].bounce++;
+    // // cosine weighted sample accounts for Lambert's Law, path continue count is the seed
+    // int seed = getSeed(pathId, paths[pathId].bounce, frameIndex[0]);
+    // float3 reflect = randCosHemisphereSample(hitRecord.normal.xyz, pixelIndex, seed);
+    // paths[pathId].direction = float4(reflect, 0);
+    // paths[pathId].bounce++;
 
-    // Lambertian Diffuse BRDF
-    paths[pathId].throughput *= materialData.albedo / PI;
+    // // Lambertian Diffuse BRDF
+    // paths[pathId].throughput *= materialData.albedo / PI;
    
-    // add path to continue
-    uint prevIndex = pathsContinueCounter.IncrementCounter();
-    pathsContinueCounter[prevIndex] = pathId;
+    // // add path to continue
+    // uint prevIndex = pathsContinueCounter.IncrementCounter();
+    // pathsContinueCounter[prevIndex] = pathId;
 }
