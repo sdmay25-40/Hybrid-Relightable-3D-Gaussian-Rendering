@@ -111,9 +111,9 @@ public class SceneSerializer : MonoBehaviour
                     Vector3 position2 = meshFilter.sharedMesh.vertices[meshTriangles[i+2]];
 
                     Triangle t;
-                    t.position0 = position0;
-                    t.position1 = position1;
-                    t.position2 = position2;
+                    t.position0 = new Vector4(position0.x, position0.y, position0.z, 1);
+                    t.position1 = new Vector4(position1.x, position1.y, position1.z, 1);
+                    t.position2 = new Vector4(position2.x, position2.y, position2.z, 1);
                     triangles.Add(t);
 
                     min = Vector3.Min(min, position0);

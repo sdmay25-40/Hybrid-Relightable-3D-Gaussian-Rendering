@@ -59,6 +59,7 @@ struct CameraData
     float4 quaternion;
 };
 
+/// <summary> Converts pathId to pixelcoordinates (x,y) </summary>
 uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)
 {
     uint x = (uint) ((pathId / pathsPerPixel) % screenWidth);
@@ -67,7 +68,7 @@ uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)
 }
 
 /// <source> https://www.songho.ca/opengl/gl_quaternion.html </source>
-/// <summary> Converts a normalized quaternion to a rotation matrix.</summary>
+/// <summary> Converts a normalized quaternion to a rotation matrix. </summary>
 float3x3 quatToRotMatrix(float4 q)
 {
     return float3x3(
@@ -80,24 +81,29 @@ float3x3 quatToRotMatrix(float4 q)
     );
 }
 
-int getSeed(int pathId, int bounce, int frameIndex)
+/// <summary>
+/// Generates a unique seed for each frame and bounce iteration. Seed values above 500,000 generate visual
+/// artifacts caused by floating-point precision issues in rand2(). Values +86,213,428 generate no output.
+/// </summary>
+uint getSeed(uint bounce, uint frameIndex)
 {
-    return 19349663 ^ pathId * 83492791 ^ bounce * 492876847 ^ frameIndex;
+    // TODO: add pathId as unique identifier; multiple paths per pixel will generate the same random number
+    return ((frameIndex * 73856093u) ^ (bounce * 19349663u)) % 500000u;
 }
 
-// https://www.shadertoy.com/view/4djSRW
-float2 rand2(float2 uv, int seed)
+/// <source> https://www.shadertoy.com/view/4djSRW </source>
+float2 rand2(float2 uv, uint seed)
 {
 	float3 p3 = frac(float3(uv.xyx + seed) * float3(0.1031, 0.1030, 0.0973));
     p3 += dot(p3, p3.yzx + 33.33);
     return frac((p3.xx + p3.yz) * p3.zy);
 }
 
-// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#SamplingaUnitDisk
-float2 randDiskSample(float2 uv, int seed)
+/// <source> https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#SamplingaUnitDisk </source>
+float2 randDiskSample(float2 uv, uint seed)
 {
     // map rand numbers to [-1,1]
-    float2 rand = 2.0 * rand2(uv, seed) - 1;
+    float2 rand = 2.0 * rand2(uv, seed) - 1.0;
 
     // divide by zero edge case
     if (rand.x == 0 && rand.y == 0)
@@ -110,33 +116,40 @@ float2 randDiskSample(float2 uv, int seed)
     if (abs(rand.x) > abs(rand.y))
     {
         r = rand.x;
-        theta = PI / 4.0 * (rand.y / rand.x);
+        theta = (PI / 4.0) * (rand.y / rand.x);
     }
     else
     {
         r = rand.y;
-        theta = PI / 2.0 - PI / 4.0 * (rand.x / rand.y);
+        theta = (PI / 2.0) - (PI / 4.0) * (rand.x / rand.y);
     }
 
     return r * float2(cos(theta), sin(theta));
 }
 
-// https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling
-// Generates a cosine weighted sample of a hemisphere using Malley's Method
+/// <source> https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling </source>
+/// <summary> Generates a cosine weighted sample of a hemisphere using Malley's Method </summary>
 float3 randCosHemisphereSample(float3 normal, float2 uv, int seed)
 {
+    // generate random, cosine-weighted direction above xy-plane
+    // float2 rand = randDiskSample(uv, seed) * 0.0;
     float2 rand = randDiskSample(uv, seed);
     float z = sqrt(max(0, 1 - rand.x * rand.x - rand.y * rand.y));
-    float3 sampleTangentSpace = float3(rand.xy, z);
+    float3 sampleTangentSpace = float3(rand, z);
 
-    float3 up = float3(0,1,0);
-    float3 tangent = normalize(cross(up, normal));
-    if (tangent.x == 0 && tangent.y == 0 && tangent.z == 0)
+    // rotate the z-axis to align with the normal of the surface
+    float3 tangent;
+    if (abs(normal.y) > 1 - EPSILON)
     {
         tangent = float3(1,0,0);
     }
-    float3 bitangent = cross(normal, tangent);
-    float3x3 tangentToWorld = float3x3(tangent, bitangent, normal);
+    else
+    {
+        tangent = normalize(cross(float3(0,1,0), normal));
+    }
 
-    return mul(tangentToWorld, sampleTangentSpace);
+    float3 bitangent = cross(normal, tangent);
+
+    // transpose(float3x3(tangent, bitangent, normal))
+    return sampleTangentSpace.x * tangent + sampleTangentSpace.y * bitangent + sampleTangentSpace.z * normal;
 }

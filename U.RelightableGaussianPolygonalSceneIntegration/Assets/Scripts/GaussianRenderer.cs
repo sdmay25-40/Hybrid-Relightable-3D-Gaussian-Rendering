@@ -64,14 +64,14 @@ public class GaussianRenderer : MonoBehaviour
         cam.cullingMask = 0;
         cam.depthTextureMode = DepthTextureMode.None;
 
-        renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        renderTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
         renderTexture.enableRandomWrite = true;
         if (!renderTexture.Create())
         {
             Debug.LogError("'GaussianRender': Failed to create 'RenderTexture'.");
         }
 
-        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
         accumulationTexture.enableRandomWrite = true;
         if (!accumulationTexture.Create())
         {
@@ -98,12 +98,11 @@ public class GaussianRenderer : MonoBehaviour
 
     private void Update()
     {
-        // TODO: if camera moves or something moves in the scene update the buffers 
-        // TODO: reset accumulation buffer and frame index
-        if (false)
-        {
-            SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
-        }
+        // TODO: if camera moves or something moves in the scene: update buffers + reset accumulation buffer and frame index
+        // if (true)
+        // {
+        //     SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
+        // }
     }
 
     private void OnDestroy()
@@ -258,8 +257,8 @@ public class GaussianRenderer : MonoBehaviour
         // accumulate render texture
         {
             int kernelIndex = accumulateRenderTexture.FindKernel("CSMain");
-            int threadGroupsX = Mathf.CeilToInt((float)renderTexture.width / 32);
-            int threadGroupsY = Mathf.CeilToInt((float)renderTexture.height / 32);
+            int threadGroupsX = Mathf.CeilToInt(renderTexture.width / 32.0f);
+            int threadGroupsY = Mathf.CeilToInt(renderTexture.height / 32.0f);
             commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenWidth", Screen.width);
             commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenHeight", Screen.height);
             commandBuffer.SetComputeBufferParam(accumulateRenderTexture, kernelIndex, "frameIndex", frameIndex);
@@ -269,6 +268,8 @@ public class GaussianRenderer : MonoBehaviour
         }
 
         commandBuffer.Blit(accumulationTexture, null as RenderTexture);
+
+        // commandBuffer.Blit(renderTexture, null as RenderTexture);
 
         // increment frame index
         {

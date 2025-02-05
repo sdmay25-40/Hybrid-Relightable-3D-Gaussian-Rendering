@@ -34,7 +34,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         // TODO: check for AABB intersections
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
 
-        // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+        // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
         for (uint j = 0; j < aabb.triangleCount; j++)
         {
             Triangle tri = triangles[aabb.triangleStartIndex + j];
@@ -72,7 +72,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 closestHit.u = u;
                 closestHit.v = v;
                 closestHit.materialIndex = currGameObj.materialIndex;
-                closestHit.normal = mul(currGameObj.objectToWorld, float4(normalize(cross(aToB, aToC)), 0));
+                closestHit.normal = normalize(mul(currGameObj.objectToWorld, float4(cross(aToB, aToC), 0)));
             }
         }
     }
