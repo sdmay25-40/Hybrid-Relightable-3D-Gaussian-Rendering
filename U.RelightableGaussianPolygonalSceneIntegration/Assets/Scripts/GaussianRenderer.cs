@@ -250,8 +250,6 @@ public class GaussianRenderer : MonoBehaviour
 
         commandBuffer.Blit(accumulationTexture, null as RenderTexture);
 
-        // commandBuffer.Blit(renderTexture, null as RenderTexture);
-
         // increment frame index
         {
             int kernelIndex = increment.FindKernel("CSMain");

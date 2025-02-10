@@ -92,6 +92,7 @@ uint getSeed(uint bounce, uint frameIndex)
 }
 
 /// <source> https://www.shadertoy.com/view/4djSRW </source>
+/// <summary> Generates a random float2 where each component is between [0,1]. </summary>
 float2 rand2(float2 uv, uint seed)
 {
 	float3 p3 = frac(float3(uv.xyx + seed) * float3(0.1031, 0.1030, 0.0973));
@@ -100,6 +101,7 @@ float2 rand2(float2 uv, uint seed)
 }
 
 /// <source> https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#SamplingaUnitDisk </source>
+/// <summary> Generates a uniformly sampled random position on a disk. </summary>
 float2 randDiskSample(float2 uv, uint seed)
 {
     // map rand numbers to [-1,1]
