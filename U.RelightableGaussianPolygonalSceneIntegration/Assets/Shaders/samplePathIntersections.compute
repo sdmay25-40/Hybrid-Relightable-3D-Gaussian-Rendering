@@ -29,36 +29,21 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     if (materialData.type == 1) // emissive
     {
-        // TODO: write to texture; += might cause issues
+        // TODO: write to texture; += causes access issues w/ pathsPerPixel > 1
         // float invPathsPerPixel = 1.0 / pathsPerPixel;
         // renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo * invPathsPerPixel;
         renderTexture[pixelIndex] = paths[pathId].throughput * materialData.albedo;
         return;
     }
 
-    // TODO: remove bounce from Path struct (create a int buffer to keep count in the loop)
-
-    // add normal offset to avoid collision with the same object
-    paths[pathId].origin += float3((hitRecord.t * paths[pathId].direction + hitRecord.normal * EPSILON).xyz);
-
-
-    // float3 debugColor = paths[pathId].origin;
-    // debugColor.x = debugColor.x * 0.5 + 0.5;
-    // debugColor.y *= 0.5;
-    // debugColor.z = debugColor.z * 0.5 + 0.5;
-    // float3 debugColor = float3(1,1,1) * (paths[pathId].origin.y * 0.5);
-    // renderTexture[pixelIndex] = float4(debugColor,1);
-
+    // add normal offset to avoid collision with itself
+    paths[pathId].origin += (hitRecord.t * paths[pathId].direction + hitRecord.normal * EPSILON).xyz;
 
     // cosine weighted sample accounts for Lambert's Law
     int seed = getSeed(paths[pathId].bounce, frameIndex[0]);
     float3 reflect = randCosHemisphereSample(hitRecord.normal.xyz, pixelIndex, seed);
-
-    // renderTexture[pixelIndex] = float4(reflect,1);
-
     paths[pathId].direction = float4(reflect, 0);
     paths[pathId].bounce++;
-
 
     // Lambertian Diffuse BRDF
     paths[pathId].throughput *= materialData.albedo / PI;

@@ -234,7 +234,7 @@ MonoBehaviour:
   accumulateRenderTexture: {fileID: 7200000, guid: 1befd23c6be3f1042ab62ed1ab848812, type: 3}
   increment: {fileID: 7200000, guid: 0279ba4e513d1b948a98c4db32c23882, type: 3}
   pathsPerPixel: 1
-  pathBounceLimit: 1
+  pathBounceLimit: 2
 --- !u!1001 &1568246200
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -286,6 +286,22 @@ PrefabInstance:
     - target: {fileID: 3868933994013022868, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
       propertyPath: m_Name
       value: CornellBox
+      objectReference: {fileID: 0}
+    - target: {fileID: 3868933994013022868, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4973591231150536951, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4973591231150536951, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 37.849
+      objectReference: {fileID: 0}
+    - target: {fileID: 4973591231150536951, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7237902778355074165, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
       propertyPath: m_LocalScale.x

@@ -2,26 +2,6 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using System.Security.Cryptography;
-
-// when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
-// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
-public struct PathPayload
-{
-    public Vector4 direction;
-    public Vector3 origin;
-    public uint bounce;
-    public Vector4 throughput;
-}
-
-public struct PathHitRecord
-{
-    public float t;
-    public float u;
-    public float v;
-    public uint materialIndex;
-    public Vector4 normal;
-}
 
 public class GaussianRenderer : MonoBehaviour
 {
@@ -213,6 +193,7 @@ public class GaussianRenderer : MonoBehaviour
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
         }
 
+        // TODO: remove bounce from Path struct (create a int buffer to keep count in the loop)
         for(uint i = 0; i < pathBounceLimit + 1; i++)
         {
             commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);

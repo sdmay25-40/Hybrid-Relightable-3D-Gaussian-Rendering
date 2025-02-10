@@ -2,34 +2,8 @@
 #define EPSILON 1e-6
 #define PI 3.14159265359
 
-// when updating, ensure structs in 'Scripts/GaussianRenderer.cs' & 'Scripts/SceneSerializer' are updated to match
+// when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
-struct PathPayload
-{
-    float4 direction;
-    float3 origin;
-    uint bounce;
-    float4 throughput;
-};
-
-struct PathHitRecord
-{
-    float t;
-    float u;
-    float v;
-    uint materialIndex;
-    float4 normal;
-};
-
-struct GameObjectData
-{
-    float4x4 objectToWorld;
-    float4x4 worldToObject;
-    uint aabbRootIndex;
-    uint materialIndex;
-    float2 padding;
-};
-
 struct AABB
 {
     float3 min;
@@ -41,6 +15,21 @@ struct AABB
     float2 padding;
 };
 
+struct CameraData
+{
+    float4 position;
+    float4 quaternion;
+};
+
+struct GameObjectData
+{
+    float4x4 normalMatrix;
+    float4x4 worldToObject;
+    uint aabbRootIndex;
+    uint materialIndex;
+    float2 padding;
+};
+
 struct MaterialData
 {
     float4 albedo;
@@ -48,15 +37,26 @@ struct MaterialData
     float3 padding;
 };
 
+struct PathHitRecord
+{
+    float t;
+    float u;
+    float v;
+    uint materialIndex;
+    float4 normal;
+};
+
+struct PathPayload
+{
+    float4 direction;
+    float3 origin;
+    uint bounce;
+    float4 throughput;
+};
+
 struct Triangle
 {
     float4 positions[3];
-};
-
-struct CameraData
-{
-    float4 position;
-    float4 quaternion;
 };
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>
@@ -132,7 +132,6 @@ float2 randDiskSample(float2 uv, uint seed)
 float3 randCosHemisphereSample(float3 normal, float2 uv, int seed)
 {
     // generate random, cosine-weighted direction above xy-plane
-    // float2 rand = randDiskSample(uv, seed) * 0.0;
     float2 rand = randDiskSample(uv, seed);
     float z = sqrt(max(0, 1 - rand.x * rand.x - rand.y * rand.y));
     float3 sampleTangentSpace = float3(rand, z);

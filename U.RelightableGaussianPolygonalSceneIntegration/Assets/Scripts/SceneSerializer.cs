@@ -1,56 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
-using UnityEngine.Rendering;
-
-// when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
-// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
-public struct GameObjectData
-{
-    public Matrix4x4 objectToWorld;
-    public Matrix4x4 worldToObject;
-    public uint aabbRootIndex;
-    public uint materialIndex;
-    private Vector2 padding;
-}
-
-public struct AABB
-{
-    public Vector3 min;
-    public Vector3 max;
-    public uint leftChildIndex;
-    public uint rightChildIndex;
-    public uint triangleCount; // if not a leaf node, set to uint.MaxValue
-    public uint triangleStartIndex;
-    private Vector2 padding;
-}
-
-public struct MaterialData
-{
-    public Vector4 albedo;
-    public uint type;
-    private Vector3 padding;
-    // float metallic;
-    // float roughness;
-    // ...
-}
-
-// TODO: break up vertex positions from other attributes when expanded
-public struct Triangle
-{
-    // you cannot do public Vector4 positions[3] in C#
-    public Vector4 position0;
-    public Vector4 position1;
-    public Vector4 position2;
-    // ...
-}
-
-public struct CameraData
-{
-    public Vector4 position;
-    public Vector4 quaternion;
-}
 
 public class SceneSerializer : MonoBehaviour
 {
@@ -77,7 +27,7 @@ public class SceneSerializer : MonoBehaviour
             GameObjectData currGameObj = new GameObjectData();
 
             Transform transform = meshRenderer.gameObject.transform;
-            currGameObj.objectToWorld = transform.localToWorldMatrix;
+            currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
 
             MeshFilter meshFilter = meshRenderer.gameObject.GetComponent<MeshFilter>();
@@ -98,8 +48,8 @@ public class SceneSerializer : MonoBehaviour
                 int[] meshTriangles = meshFilter.sharedMesh.triangles;
 
                 AABB aabb = new AABB();
-                aabb.triangleCount = (uint) meshTriangles.Length / 3;
                 aabb.triangleStartIndex = (uint) triangles.Count;
+                aabb.triangleCount = (uint) meshTriangles.Length / 3;
 
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
                 Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
@@ -185,7 +135,6 @@ public class SceneSerializer : MonoBehaviour
         trianglesBuffer.SetData(triangles);
     }
 
-    // can be expanded to update all necessary scene data (lights, camera, ...)
     public static void UpdateSceneDataBuffer(in Camera cam, ref ComputeBuffer cameraData, in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
     {
         CameraData camData = new CameraData
@@ -199,7 +148,7 @@ public class SceneSerializer : MonoBehaviour
         {
             GameObjectData currGameObj = gameObjectDatas[i];
             Transform transform = meshRenderers[i].gameObject.transform;
-            currGameObj.objectToWorld = transform.localToWorldMatrix;
+            currGameObj.normalMatrix = transform.localToWorldMatrix;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
             gameObjectDatas[i] = currGameObj;
         }
