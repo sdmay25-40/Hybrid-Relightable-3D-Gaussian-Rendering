@@ -111,7 +111,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     closestHit.t = FLT_MAX;
 
     Stack s;
-
+    
     for (int i = 0; i < gameObjectDataCount; i++)
     {
         GameObjectData currGameObj = gameObjectDatas[i];
@@ -121,7 +121,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         s = stackReset(s, id.x);
         s = stackPush(s, currGameObj.aabbRootIndex);
         int k =0;
-        while(s.size > 0 && k < 100000){
+        while(s.size > 0 && k < 10000){
             AABB aabb = aabbs[stackPeek(s)];
 
             if(rayAABBIntersect(path, aabb)){
@@ -186,7 +186,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
 
         if(s.size != 0){
-            debugBuffer[1] = 3;
+            debugBuffer[1] = s.topIndex;
         }
         
     }

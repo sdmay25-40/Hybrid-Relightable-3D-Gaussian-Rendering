@@ -38,6 +38,12 @@ public static class Utils {
             + bb.leftChildIndex + ", Right Child Index: " + bb.rightChildIndex;
     }
 
+    public static string TriangleToString(Triangle tri){
+        return "{Point0: " + tri.position0.x + "," + tri.position0.y + "," + tri.position0.z  + " " +
+        "Point1: " + tri.position1.x + "," + tri.position1.y + "," + tri.position1.z  + " " +
+        "Point2: " + tri.position2.x + "," + tri.position2.y + "," + tri.position2.z  + "}";
+    }
+
     public static void WriteBVHToFile(List<AABB> toWrite, int rootIndex){
         string bvhStr = "";
 
@@ -62,5 +68,67 @@ public static class Utils {
         }
 
         File.WriteAllText("bvhDebug.txt", bvhStr);
+    }
+
+    /// <summary>
+    /// Returns
+    /// true: If the two triangles are equal
+    /// false: If the two triangles aren't equal
+    /// </summary>
+    public static bool TriangleEquals(Triangle t1, Triangle t2){
+        List<Vector4> t1Verts = new List<Vector4>{t1.position0, t1.position1, t1. position2};
+        List<Vector4> t2Verts = new List<Vector4>{t2.position0, t2.position1, t2. position2};
+        // Check all of the t1 verts against the t2Verts
+        foreach(Vector4 v in t1Verts){
+            bool vFound = false;
+            for(int i = 0; i < t2Verts.Count; i++){
+                if(Vector4.Equals(v, t2Verts[i])){
+                    vFound = true;
+                    t2Verts.RemoveAt(i);
+                    break;
+                }
+            }
+
+            // If this vertex hasn't been found return false
+            if(!vFound){
+                return false;
+            }
+        }
+
+        // Return true because all vertices have been found 
+        return true;
+    }
+
+    // Check if a given AABB is inside the AABB defined by the given min and max values
+    public static bool AABBWithinMinMax(AABB aabb, Vector3 min, Vector3 max){
+        if(aabb.min.x >= min.x && aabb.min.y >= min.y && aabb.min.z >= min.z
+        && aabb.max.x <= max.x && aabb.max.y <= max.y && aabb.max.z <= max.z){
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+    // Check if a given point is within a minimum or maximum
+    public static bool PointWithinMinMax(Vector4 point, Vector3 min, Vector3 max){
+        if(point.x >= min.x && point.y >= min.y && point.z >= min.z 
+        && point.x <= max.x && point.y <= max.y && point.z <= max.z){
+            return true;
+        }
+
+        return false;
+    }
+
+    // Check is a triangle is located between a minimum and maximum
+    public static bool TriangleWithinMinMax(Triangle tri, Vector3 min, Vector3 max, MeshFilter meshTriWithin){
+        if(PointWithinMinMax(meshTriWithin.transform.TransformPoint(tri.position0), min, max) 
+        && PointWithinMinMax(meshTriWithin.transform.TransformPoint(tri.position1), min, max) 
+        && PointWithinMinMax(meshTriWithin.transform.TransformPoint(tri.position2), min, max)){
+            return true;
+        }
+
+        return false;
     }
 }

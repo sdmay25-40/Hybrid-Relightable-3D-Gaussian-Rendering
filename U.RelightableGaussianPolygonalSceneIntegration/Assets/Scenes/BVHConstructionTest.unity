@@ -132,6 +132,7 @@ GameObject:
   m_Component:
   - component: {fileID: 258697516}
   - component: {fileID: 258697515}
+  - component: {fileID: 258697517}
   m_Layer: 0
   m_Name: WireframeDrawer
   m_TagString: Untagged
@@ -146,7 +147,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 258697514}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d369c3382a2fc417babad9dbd09573d6, type: 3}
   m_Name: 
@@ -167,6 +168,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &258697517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 258697514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb37f7e0ed0064909808fa45fb5eb9fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  testObj: {fileID: 1380043407}
+  mats:
+  - {fileID: 2100000, guid: ea272d40945294a8383a4643c5798aff, type: 2}
+  - {fileID: 2100000, guid: 120c1d02692244fb5a4717fdaccbafe1, type: 2}
+  - {fileID: 2100000, guid: 9a10d6688923c45a7992e2809ddf1eb2, type: 2}
 --- !u!1 &682152528
 GameObject:
   m_ObjectHideFlags: 0

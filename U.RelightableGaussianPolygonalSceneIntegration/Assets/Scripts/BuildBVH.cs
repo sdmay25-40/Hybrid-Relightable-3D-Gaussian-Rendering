@@ -11,7 +11,7 @@ public static class BuildBVH
 
     private static readonly float COST_TRAV = 1;
     private static readonly float COST_ITRSCT = 2;
-    private static readonly float NUM_DIVISIONS = 8;
+    private static readonly float NUM_DIVISIONS = 3;
 
     /// <summary>
     /// Determine the triangle position, AAAB size, and cost of a split in an AABB 
@@ -66,7 +66,7 @@ public static class BuildBVH
                 left.max = Vector3.Max(left.max, mesh.transform.TransformPoint(vert2));    
 
             }
-            else{
+            else{          
                 rightBoxTris.Add(tri);
                 right.min = Vector3.Min(right.min, mesh.transform.TransformPoint(vert0));
                 right.min = Vector3.Min(right.min, mesh.transform.TransformPoint(vert1));
@@ -150,8 +150,10 @@ public static class BuildBVH
                 tri.position0 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert0Idx]);
                 tri.position1 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert1Idx]);
                 tri.position2 = Utils.Vec3ToVec4(mesh.sharedMesh.vertices[vert2Idx]);
-
+                
                 triangles.Add(tri);
+
+
             }
 
             // Setup root
@@ -187,7 +189,7 @@ public static class BuildBVH
         root.min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         root.max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
-        for (int i =0; i <= mesh.sharedMesh.triangles.Length - 3; i+=3){
+        for (int i =0; i < mesh.sharedMesh.triangles.Length; i+=3){
             int vert0Idx = mesh.sharedMesh.triangles[i];
             int vert1Idx = mesh.sharedMesh.triangles[i + 1];
             int vert2Idx = mesh.sharedMesh.triangles[i + 2];
