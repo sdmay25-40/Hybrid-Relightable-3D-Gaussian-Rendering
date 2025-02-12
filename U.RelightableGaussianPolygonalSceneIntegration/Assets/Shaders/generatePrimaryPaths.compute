@@ -6,32 +6,33 @@ int pathsPerPixel;
 int screenWidth;
 float invScreenHeight;
 float tanFovHalf;
-float4 cameraPosition;
-float4 cameraQuaternion;
+StructuredBuffer<CameraData> cameraData;
 RWStructuredBuffer<PathPayload> paths; 
 RWStructuredBuffer<uint> pathsContinueCounter;
 
-[numthreads(32,1,1)]
+[numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     if (id.x > (uint) pathCount)
     {
         return;
     }
+
     uint pathId = id.x;
-    int x = (pathId / pathsPerPixel) % screenWidth;
-    int y = (pathId / pathsPerPixel) / screenWidth;
-    float pixelDirXCamSpace = ((2 * x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
-    float pixelDirYCamSpace = ((2 * y + 1) * invScreenHeight - 1) * tanFovHalf;
+    uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
+    float pixelDirXCamSpace = ((2 * pixelIndex.x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
+    float pixelDirYCamSpace = ((2 * pixelIndex.y + 1) * invScreenHeight - 1) * tanFovHalf;
 
     // camera's image plane is at z = 1
     float3 pixelDirCamSpace = float3(pixelDirXCamSpace, pixelDirYCamSpace, 1);
 
     // direction vectors are uneffected by translations
-    float3x3 cameraToWorld = quatToRotMatrix(cameraQuaternion);
+    float3x3 cameraToWorld = quatToRotMatrix(cameraData[0].quaternion);
     float3 pixelDirWorldSpace = normalize(mul(cameraToWorld, pixelDirCamSpace));
     paths[pathId].direction = float4(pixelDirWorldSpace, 0);
-    paths[pathId].origin = cameraPosition;
+    paths[pathId].origin = cameraData[0].position.xyz;
+    paths[pathId].bounce = 0;
+    paths[pathId].throughput = float4(1,1,1,1);
 
     uint prevIndex = pathsContinueCounter.IncrementCounter();
     pathsContinueCounter[prevIndex] = pathId;

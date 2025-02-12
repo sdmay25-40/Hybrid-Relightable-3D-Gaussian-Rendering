@@ -1,23 +1,7 @@
 using System.Runtime.InteropServices;
-using Unity.VisualScripting;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-
-// when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
-// ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
-public struct PathPayload
-{
-    public Vector4 direction;
-    public Vector4 origin;
-}
-
-public struct PathHitRecord
-{
-    public float t;
-    public float u;
-    public float v;
-    public uint materialIndex;
-}
 
 public class GaussianRenderer : MonoBehaviour
 {
@@ -26,11 +10,15 @@ public class GaussianRenderer : MonoBehaviour
     [SerializeField] private ComputeShader generatePrimaryPaths;
     [SerializeField] private ComputeShader getPathIntersections;
     [SerializeField] private ComputeShader samplePathIntersections;
+    [SerializeField] private ComputeShader accumulateRenderTexture;
+    [SerializeField] private ComputeShader increment;
     // settings
     [SerializeField] private int pathsPerPixel = 1;
     [SerializeField] private int pathBounceLimit = 1;
-    private RenderTexture renderTexture;
     private CommandBuffer commandBuffer;
+    private RenderTexture renderTexture;
+    private RenderTexture accumulationTexture;
+    private ComputeBuffer frameIndex;
     private ComputeBuffer paths;
     private ComputeBuffer pathHitRecords;
     private ComputeBuffer pathsContinueCounter; // buffer of continued path indices
@@ -41,7 +29,9 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
     private ComputeBuffer gameObjectDatas;
-    private int gameObjectDataCount;
+    private ComputeBuffer cameraData;
+    private MeshRenderer[] meshRenderers;
+    private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
 
     private void Awake()
     {
@@ -54,12 +44,22 @@ public class GaussianRenderer : MonoBehaviour
         cam.cullingMask = 0;
         cam.depthTextureMode = DepthTextureMode.None;
 
-        renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+        renderTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
         renderTexture.enableRandomWrite = true;
         if (!renderTexture.Create())
         {
             Debug.LogError("'GaussianRender': Failed to create 'RenderTexture'.");
         }
+
+        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
+        accumulationTexture.enableRandomWrite = true;
+        if (!accumulationTexture.Create())
+        {
+            Debug.LogError("'GaussianRender': Failed to create 'RenderTexture'.");
+        }
+
+        frameIndex = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
+        frameIndex.SetData(new uint[]{0});
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
         paths = new ComputeBuffer(pathCount,  Marshal.SizeOf(typeof(PathPayload)));
@@ -72,16 +72,17 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
-        SceneSerializer.GetSceneData(ref commandBuffer, ref gameObjectDatas, ref gameObjectDataCount, ref aabbs, ref materialDatas, ref triangles);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles);
         BuildCommandBuffer();
     }
 
     private void Update()
     {
-        // if camera moves or something moves in the scene...
-        // cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
-        // commandBuffer.Clear();
-        // BuildCommandBuffer();
+        // TODO: if camera moves or something moves in the scene: update buffers + reset accumulation buffer and frame index
+        // if (true)
+        // {
+        //     SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
+        // }
     }
 
     private void OnDestroy()
@@ -96,6 +97,16 @@ public class GaussianRenderer : MonoBehaviour
         {
             renderTexture.Release();
             renderTexture = null;
+        }
+        if (accumulationTexture != null)
+        {
+            accumulationTexture.Release();
+            accumulationTexture = null;
+        }
+        if (frameIndex != null)
+        {
+            frameIndex.Release();
+            frameIndex = null;
         }
         if (paths != null)
         {
@@ -127,6 +138,11 @@ public class GaussianRenderer : MonoBehaviour
             pathsContinueTmpCounterValue.Release();
             pathsContinueTmpCounterValue = null;
         }
+        if (cameraData != null)
+        {
+            cameraData.Release();
+            cameraData = null;
+        }
         if (gameObjectDatas != null)
         {
             gameObjectDatas.Release();
@@ -155,9 +171,12 @@ public class GaussianRenderer : MonoBehaviour
     /// </summary>
     private void BuildCommandBuffer()
     {
+        // reset values
+        commandBuffer.SetRenderTarget(renderTexture);
+        commandBuffer.ClearRenderTarget(true, true, Color.black);
         commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
 
-        float workGroupX = 32.0f;
+        float workGroupX = 128.0f;
         int threadGroupX = Mathf.CeilToInt(paths.count / workGroupX);
 
         // generate primary paths
@@ -168,16 +187,15 @@ public class GaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeIntParam(generatePrimaryPaths, "screenWidth", Screen.width);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
-            commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraPosition", new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f));
-            commandBuffer.SetComputeVectorParam(generatePrimaryPaths, "cameraQuaternion", new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w));
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraData", cameraData);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
         }
 
-        for(uint i = 0; i < pathBounceLimit; i++)
+        // TODO: remove bounce from Path struct (create a int buffer to keep count in the loop)
+        for(uint i = 0; i < pathBounceLimit + 1; i++)
         {
-
             commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
             commandBuffer.CopyCounterValue(pathsContinueCounter, pathsContinueCounterValue, 0);
 
@@ -188,7 +206,7 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueCounterValue", pathsContinueCounterValue);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "gameObjectDatas", gameObjectDatas);
-                commandBuffer.SetComputeIntParam(getPathIntersections, "gameObjectDataCount", gameObjectDataCount);
+                commandBuffer.SetComputeIntParam(getPathIntersections, "gameObjectDataCount", gameObjectDatas.count);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "aabbs", aabbs);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "triangles", triangles);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
@@ -202,18 +220,43 @@ public class GaussianRenderer : MonoBehaviour
             // sample path intersections
             {
                 int kernelIndex = samplePathIntersections.FindKernel("CSMain");
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "frameIndex", frameIndex);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueTmpCounterValue", pathsContinueTmpCounterValue);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "materialDatas", materialDatas);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "pathsPerPixel", pathsPerPixel);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "screenWidth", Screen.width);
+                commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounceLimit", pathBounceLimit);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "paths", paths);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
                 commandBuffer.SetComputeTextureParam(samplePathIntersections, kernelIndex, "renderTexture", renderTexture);
                 commandBuffer.DispatchCompute(samplePathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
         }
 
-        commandBuffer.Blit(renderTexture, null as RenderTexture);
+        // accumulate render texture
+        {
+            int kernelIndex = accumulateRenderTexture.FindKernel("CSMain");
+            int threadGroupsX = Mathf.CeilToInt(renderTexture.width / 32.0f);
+            int threadGroupsY = Mathf.CeilToInt(renderTexture.height / 32.0f);
+            commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenWidth", Screen.width);
+            commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenHeight", Screen.height);
+            commandBuffer.SetComputeBufferParam(accumulateRenderTexture, kernelIndex, "frameIndex", frameIndex);
+            commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "renderTexture", renderTexture);
+            commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "accumulationTexture", accumulationTexture);
+            commandBuffer.DispatchCompute(accumulateRenderTexture, kernelIndex, threadGroupsX, threadGroupsY, 1);
+        }
+
+        commandBuffer.Blit(accumulationTexture, null as RenderTexture);
+
+        // increment frame index
+        {
+            int kernelIndex = increment.FindKernel("CSMain");
+            commandBuffer.SetComputeBufferParam(increment, kernelIndex, "buffer", frameIndex);
+            commandBuffer.DispatchCompute(increment, kernelIndex, 1, 1, 1);
+        }
+
         cam.AddCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
     }
 }
