@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 258697515}
   - component: {fileID: 258697517}
   m_Layer: 0
-  m_Name: WireframeDrawer
+  m_Name: ScriptRunner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -181,6 +181,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   testObj: {fileID: 1380043407}
+  testObj2: {fileID: 1288429811}
   mats:
   - {fileID: 2100000, guid: ea272d40945294a8383a4643c5798aff, type: 2}
   - {fileID: 2100000, guid: 120c1d02692244fb5a4717fdaccbafe1, type: 2}

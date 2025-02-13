@@ -7,6 +7,8 @@ public class TestBVHConstruction : MonoBehaviour
 {
     public GameObject testObj;
 
+    public GameObject testObj2;
+
     public List<Material> mats;
 
 
@@ -120,15 +122,17 @@ public class TestBVHConstruction : MonoBehaviour
         } 
 
         // If this point is reached the test has been passed
-        Debug.Log(tris.Count);
-        Debug.Log(meshFilter.mesh.triangles.Length / 3);
         return true;
     }
 
 
-    private static bool TestTreeWellFormed(List<AABB> aabbs, int rootIndex){
-        // Traverse the tree and add all found nodes
-        List<AABB> foundNodes = FindNodesInSubtree(aabbs, rootIndex);
+    private static bool TestTreesWellFormed(List<AABB> aabbs, int[] rootIndices){
+        // Traverse the tree(s) and add all found nodes
+        List<AABB> foundNodes = new List<AABB>();
+        foreach(int currIndex in rootIndices){
+            foundNodes.AddRange(FindNodesInSubtree(aabbs, currIndex));
+
+        }
 
         // Confirm that all the nodes in the tree were found
         // For each node in the tree
@@ -208,11 +212,15 @@ public class TestBVHConstruction : MonoBehaviour
         MeshFilter meshFilter = testObj.GetComponent<MeshFilter>();
         uint rootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles);
 
+        MeshFilter mf2 = testObj2.GetComponent<MeshFilter>();
+
+        uint rootIndex2 = BuildBVH.BuildBVHForMesh(mf2, ref aabbs, ref triangles); 
+
         // Run tests
         bool tst1Pass = TestAllTrisFoundInList(meshFilter, aabbs, triangles);
         Debug.Log("Test 1: " + (tst1Pass ? "Pass" : "Fail"));
 
-        bool tst2Pass = TestTreeWellFormed(aabbs, (int) rootIndex);
+        bool tst2Pass = TestTreesWellFormed(aabbs, new int[]{(int) rootIndex, (int) rootIndex2});
         Debug.Log("Test 2: " + (tst2Pass ? "Pass" : "Fail"));
 
         bool tst3Pass = TestAllAABBsValid(aabbs);
@@ -223,6 +231,18 @@ public class TestBVHConstruction : MonoBehaviour
 
         bool tst5Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex, meshFilter);
         Debug.Log("Test 5: " + (tst5Pass ? "Pass" : "Fail"));
+
+        bool tst6Pass = TestAllTrisFoundInList(mf2, aabbs, triangles);
+        Debug.Log("Test 6: " + (tst6Pass ? "Pass" : "Fail"));
+
+        bool tst7Pass = TestAllAABBsValid(aabbs);
+        Debug.Log("Test 7: " + (tst7Pass ? "Pass" : "Fail"));
+
+        bool tst8Pass = TestAABBSAllWithinParent(aabbs, (int) rootIndex2);
+        Debug.Log("Test 8: " + (tst8Pass ? "Pass" : "Fail"));
+
+        bool tst9Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex2, mf2);
+        Debug.Log("Test 9: " + (tst9Pass ? "Pass" : "Fail"));
         
     }
 

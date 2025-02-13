@@ -83,7 +83,6 @@ public class SceneSerializer : MonoBehaviour
                 // we are only creating one AABB per mesh atm so aabb is root
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);
 
-                // Debug.Log($"AABB:\n    Min: {aabb.min}\n    Max: {aabb.max}\n    leftChildIndex: {aabb.leftChildIndex}\n    rightChildIndex: {aabb.rightChildIndex}\n    triangleCount: {aabb.triangleCount}\n    triangleStartIndex: {aabb.triangleStartIndex}\n\n");
             }
             else
             {
@@ -114,9 +113,7 @@ public class SceneSerializer : MonoBehaviour
             currGameObj.materialIndex = materialIndex;
 
             gameObjectDatas.Add(currGameObj);
-        }
-        Utils.WriteBVHToFile(aabbs, (int) gameObjectDatas[0].aabbRootIndex);
-        
+        }        
         gameObjectDataCount = gameObjectDatas.Count;
 
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
