@@ -1,5 +1,6 @@
 #pragma kernel CSMain
 #include "utils.cginc"
+#include "stack.cginc"
 
 StructuredBuffer<PathPayload> paths;
 StructuredBuffer<uint> pathsContinueCounter;
@@ -10,6 +11,40 @@ StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
+RWStructuredBuffer<uint> stackBuffer;
+RWStructuredBuffer<uint> debugBuffer;
+
+// Create a new empty stack
+Stack stackInit(uint pathId){
+    Stack s;
+    s.size = 0;
+    s.headIndex = -1;
+    s.pathId = pathId;
+
+    return s;
+}
+
+// Push an item onto a stack
+Stack stackPush(Stack s, uint toPush){
+    s.size += 1;
+    s.headIndex += 1;
+    stackBuffer[s.headIndex + (s.pathId * STACK_MAX_SIZE)] = toPush;
+
+    return s;
+}
+
+// See the top item on a stack
+uint stackPeek(Stack s){
+    return stackBuffer[s.headIndex + (s.pathId * STACK_MAX_SIZE)];
+}
+
+// Remove the top item from the stack
+Stack stackPop(Stack s){
+    s.size -= 1;
+    s.headIndex -= 1;
+
+    return s;
+}
 
 [numthreads(32,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -33,47 +68,79 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
         // TODO: check for AABB intersections
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
+            
+        // Create a stack and add the root to it.
+        Stack s = stackInit(id.x);
+        s = stackPush(s, currGameObj.aabbRootIndex);  
 
-        // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-        for (uint j = 0; j < aabb.triangleCount; j++)
-        {
-            Triangle tri = triangles[aabb.triangleStartIndex + j];
-            float3 aToB = (float3) (tri.positions[1] - tri.positions[0]);
-            float3 aToC = (float3) (tri.positions[2] - tri.positions[0]);
-            float3 p = cross(pathDirObjSpace, aToC);
 
-            float det  = dot(p, aToB);
-            if (det < EPSILON)
-            {
-                continue;
+        while(s.size > 0){
+            // Take top AABB off the stack
+            uint currAABBIndex = stackPeek(s);
+            s = stackPop(s);
+            AABB aabb = aabbs[currAABBIndex];
+            if(debugBuffer[1] == 0){
+                debugBuffer[1] = aabb.triangleCount;
+            }
+            // If the ray intersects this AABB
+            if(rayAABBIntersect(path, aabb)){
+                // If this is a leaf node check for triangle intersections
+                 // TODO: Use more exact value in place of arbitrary one
+                if(aabb.triangleCount < 4294967295){
+                    // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+                    for (uint j = 0; j < aabb.triangleCount; j++)
+                    {
+                        Triangle tri = triangles[aabb.triangleStartIndex + j];
+                        float3 aToB = (float3) (tri.positions[1] - tri.positions[0]);
+                        float3 aToC = (float3) (tri.positions[2] - tri.positions[0]);
+                        float3 p = cross(pathDirObjSpace, aToC);
+
+                        float det  = dot(p, aToB);
+                        if (det < EPSILON)
+                        {
+                            continue;
+                        }
+
+                        float invDet = 1 / det;
+
+                        float3 aToOrigin = pathOriginObjSpace - (float3) tri.positions[0];
+                        float u = dot(p, aToOrigin) * invDet;
+                        if (u < 0 || u > 1)
+                        {
+                            continue; 
+                        }
+
+                        float3 q = cross(aToOrigin, aToB);
+                        float v = dot(q, pathDirObjSpace) * invDet;
+                        if (v < 0 || u + v > 1)
+                        {
+                            continue;
+                        }
+
+                        float t = dot(q, aToC) * invDet;
+
+                       
+
+                        if (t < closestHit.t)
+                        {
+                            closestHit.t = t;
+                            closestHit.u = u;
+                            closestHit.v = v;
+                            closestHit.materialIndex = currGameObj.materialIndex;
+                        }
+                    }
+                }
+                // If this is a tree node add children to the stack
+                else{
+                    debugBuffer[0] = 10;
+                    s = stackPush(s, aabb.leftChildIndex);
+                    s = stackPush(s, aabb.rightChildIndex);
+                }
             }
 
-            float invDet = 1 / det;
-
-            float3 aToOrigin = pathOriginObjSpace - (float3) tri.positions[0];
-            float u = dot(p, aToOrigin) * invDet;
-            if (u < 0 || u > 1)
-            {
-                continue; 
-            }
-
-            float3 q = cross(aToOrigin, aToB);
-            float v = dot(q, pathDirObjSpace) * invDet;
-            if (v < 0 || u + v > 1)
-            {
-                continue;
-            }
-
-            float t = dot(q, aToC) * invDet;
-
-            if (t < closestHit.t)
-            {
-                closestHit.t = t;
-                closestHit.u = u;
-                closestHit.v = v;
-                closestHit.materialIndex = currGameObj.materialIndex;
-            }
+            
         }
+
     }
     
     if (closestHit.t < FLT_MAX)
