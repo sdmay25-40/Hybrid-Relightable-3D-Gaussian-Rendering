@@ -57,7 +57,6 @@ public class WireframeBVHDisplay : MonoBehaviour
             worldRep.transform.localScale = new Vector3(b.size.x, b.size.y, b.size.z);
 
             worldRep.transform.position = b.center; 
-            // TODO: Apply a wireframe material here
             worldRep.GetComponent<MeshRenderer>().material = TempMat;
         }        
         

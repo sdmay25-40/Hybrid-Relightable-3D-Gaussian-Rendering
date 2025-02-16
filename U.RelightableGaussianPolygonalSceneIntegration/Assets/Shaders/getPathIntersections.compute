@@ -12,7 +12,6 @@ StructuredBuffer<Triangle> triangles;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 RWStructuredBuffer<uint> stackBuffer;
-RWStructuredBuffer<uint> debugBuffer;
 
 // Create a new empty stack
 Stack stackInit(uint pathId){
@@ -66,7 +65,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         float3 pathOriginObjSpace = (float3) mul(currGameObj.worldToObject, path.origin);
         float3 pathDirObjSpace = (float3) mul(currGameObj.worldToObject, path.direction);
 
-        // TODO: check for AABB intersections
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
             
         // Create a stack and add the root to it.
@@ -79,14 +77,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             uint currAABBIndex = stackPeek(s);
             s = stackPop(s);
             AABB aabb = aabbs[currAABBIndex];
-            if(debugBuffer[1] == 0){
-                debugBuffer[1] = aabb.triangleCount;
-            }
+
             // If the ray intersects this AABB
             if(rayAABBIntersect(path, aabb)){
                 // If this is a leaf node check for triangle intersections
-                 // TODO: Use more exact value in place of arbitrary one
-                if(aabb.triangleCount < 4294967295){
+                if(aabb.triangleCount < 4294967295u){
                     // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
                     for (uint j = 0; j < aabb.triangleCount; j++)
                     {
@@ -132,7 +127,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 }
                 // If this is a tree node add children to the stack
                 else{
-                    debugBuffer[0] = 10;
                     s = stackPush(s, aabb.leftChildIndex);
                     s = stackPush(s, aabb.rightChildIndex);
                 }

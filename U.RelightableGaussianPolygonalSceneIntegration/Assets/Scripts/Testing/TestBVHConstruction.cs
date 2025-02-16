@@ -22,8 +22,7 @@ public class TestBVHConstruction : MonoBehaviour
             return false;
         }
         // If this is a leaf node
-        // TODO: Change this to a more accurate value instead of an arbitrary testing value
-        if(aabb.triangleCount < 1000000){
+        if(aabb.triangleCount < 4294967295){
             return true;
         }
         // If this is a tree node
@@ -41,8 +40,7 @@ public class TestBVHConstruction : MonoBehaviour
         foundNodes.Add(aabbs[subtreeRootIndex]);
 
         // If this is a tree node recurse and add found nodes
-        // TODO: Change this to a more accurate value instead of an arbitrary testing value
-        if(aabbs[subtreeRootIndex].triangleCount >= 1000000){
+        if(aabbs[subtreeRootIndex].triangleCount >= 4294967295){
             List<AABB> leftTreeNodes = FindNodesInSubtree(aabbs, (int) aabbs[subtreeRootIndex].leftChildIndex);
             List<AABB> rightTreeNodes = FindNodesInSubtree(aabbs, (int) aabbs[subtreeRootIndex].rightChildIndex);
             foundNodes.AddRange(leftTreeNodes);
@@ -175,8 +173,7 @@ public class TestBVHConstruction : MonoBehaviour
 
     public static bool TestAllTrianglesWithinAABB(List<AABB> aabbs, List<Triangle> tris, int currIndex, MeshFilter mesh){
         // If this is a tree node
-        // TODO: Change this to a more accurate value instead of an arbitrary testing value
-        if(aabbs[currIndex].triangleCount >= 1000000){
+        if(aabbs[currIndex].triangleCount >= 4294967295){
             // Recursively call
             return TestAllTrianglesWithinAABB(aabbs, tris, (int) aabbs[currIndex].leftChildIndex, mesh) 
                 && TestAllTrianglesWithinAABB(aabbs, tris, (int) aabbs[currIndex].rightChildIndex, mesh);
