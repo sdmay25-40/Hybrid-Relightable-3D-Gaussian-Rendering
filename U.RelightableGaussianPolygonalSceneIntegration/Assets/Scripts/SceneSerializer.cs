@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer)
     {
         // init camera buffer        
         cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
@@ -18,6 +18,7 @@ public class SceneSerializer : MonoBehaviour
         List<AABB> aabbs = new List<AABB>();
         List<MaterialData> materialDatas = new List<MaterialData>();
         List<Triangle> triangles = new List<Triangle>();
+        List<Vertex> vertices = new List<Vertex>();
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
@@ -41,11 +42,24 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
+                Mesh mesh = meshFilter.sharedMesh;
+
                 // we are only creating one AABB per mesh atm so aabb is root
                 aabbRootIndex = (uint)aabbs.Count; 
                 meshInstanceToAABB.Add(meshInstanceId, aabbs.Count);
 
-                int[] meshTriangles = meshFilter.sharedMesh.triangles;
+                // add vertex data
+                uint vertexStartIndex = (uint) vertices.Count;
+                for (int i = 0; i < mesh.vertices.Length; i++)
+                {
+                    Vertex v;
+                    v.position = mesh.vertices[i];
+                    v.normal = mesh.normals[i];
+                    v.albedoUV = mesh.uv[i];
+                    vertices.Add(v);
+                }
+
+                int[] meshTriangles = mesh.triangles;
 
                 AABB aabb = new AABB();
                 aabb.triangleStartIndex = (uint) triangles.Count;
@@ -54,24 +68,22 @@ public class SceneSerializer : MonoBehaviour
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
                 Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
-                for(int i = 0; i < meshTriangles.Length; i+=3)
+                for (int i = 0; i < meshTriangles.Length; i+=3)
                 {
-                    Vector3 position0 = meshFilter.sharedMesh.vertices[meshTriangles[i]];
-                    Vector3 position1 = meshFilter.sharedMesh.vertices[meshTriangles[i+1]];
-                    Vector3 position2 = meshFilter.sharedMesh.vertices[meshTriangles[i+2]];
-
-                    Triangle t;
-                    t.position0 = new Vector4(position0.x, position0.y, position0.z, 1);
-                    t.position1 = new Vector4(position1.x, position1.y, position1.z, 1);
-                    t.position2 = new Vector4(position2.x, position2.y, position2.z, 1);
+                    Triangle t = new Triangle
+                    {
+                        v0 = (uint) meshTriangles[i] + vertexStartIndex,
+                        v1 = (uint) meshTriangles[i+1] + vertexStartIndex,
+                        v2 = (uint) meshTriangles[i+2] + vertexStartIndex
+                    };
                     triangles.Add(t);
 
-                    min = Vector3.Min(min, position0);
-                    min = Vector3.Min(min, position1);
-                    min = Vector3.Min(min, position2);
-                    max = Vector3.Max(max, position0);
-                    max = Vector3.Max(max, position1);
-                    max = Vector3.Max(max, position2);
+                    min = Vector3.Min(min, vertices[(int)t.v0].position);
+                    min = Vector3.Min(min, vertices[(int)t.v1].position);
+                    min = Vector3.Min(min, vertices[(int)t.v2].position);
+                    max = Vector3.Max(max, vertices[(int)t.v0].position);
+                    max = Vector3.Max(max, vertices[(int)t.v1].position);
+                    max = Vector3.Max(max, vertices[(int)t.v2].position);
                 }
 
                 aabb.min = min;
@@ -128,11 +140,13 @@ public class SceneSerializer : MonoBehaviour
         aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
         materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
         trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
+        verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
 
         gameObjectDatasBuffer.SetData(gameObjectDatas);
         aabbsBuffer.SetData(aabbs);
         materialDatasBuffer.SetData(materialDatas);
         trianglesBuffer.SetData(triangles);
+        verticesBuffer.SetData(vertices);
     }
 
     public static void UpdateSceneDataBuffer(in Camera cam, ref ComputeBuffer cameraData, in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)

@@ -32,18 +32,18 @@ struct GameObjectData
 
 struct MaterialData
 {
-    float4 albedo;
     uint type;
+    float4 albedo;
     float3 padding;
 };
 
 struct PathHitRecord
 {
     float t;
-    float u;
-    float v;
-    uint materialIndex;
-    float4 normal;
+    uint materialType;
+    float4 albedo;
+    float3 normal;
+    float3 padding;
 };
 
 struct PathPayload
@@ -56,7 +56,17 @@ struct PathPayload
 
 struct Triangle
 {
-    float4 positions[3];
+    uint v0;
+    uint v1;
+    uint v2;
+    uint padding;
+};
+
+struct Vertex
+{
+    float3 position;
+    float3 normal;
+    float2 albedoUv;
 };
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>

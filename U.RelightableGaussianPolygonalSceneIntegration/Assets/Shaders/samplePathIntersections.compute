@@ -5,7 +5,6 @@ StructuredBuffer<uint> frameIndex;
 StructuredBuffer<uint> pathsContinueTmpCounter;
 StructuredBuffer<uint> pathsContinueTmpCounterValue;
 StructuredBuffer<PathHitRecord> pathHitRecords;
-StructuredBuffer<MaterialData> materialDatas;
 int pathsPerPixel;
 int screenWidth;
 int pathBounceLimit;
@@ -24,29 +23,28 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     uint pathId = pathsContinueTmpCounter[id.x];
     PathHitRecord hitRecord = pathHitRecords[pathId];
 
-    MaterialData materialData = materialDatas[hitRecord.materialIndex];
     uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
 
-    if (materialData.type == 1) // emissive
+    if (hitRecord.materialType == 1) // emissive
     {
         // TODO: write to texture; += causes access issues w/ pathsPerPixel > 1
         // float invPathsPerPixel = 1.0 / pathsPerPixel;
-        // renderTexture[pixelIndex] += paths[pathId].throughput * materialData.albedo * invPathsPerPixel;
-        renderTexture[pixelIndex] = paths[pathId].throughput * materialData.albedo;
+        // renderTexture[pixelIndex] += paths[pathId].throughput * hitRecord.albedo * invPathsPerPixel;
+        renderTexture[pixelIndex] = paths[pathId].throughput * hitRecord.albedo;
         return;
     }
 
     // add normal offset to avoid collision with itself
-    paths[pathId].origin += (hitRecord.t * paths[pathId].direction + hitRecord.normal * EPSILON).xyz;
+    paths[pathId].origin += (hitRecord.t * paths[pathId].direction).xyz +  hitRecord.normal * EPSILON;
 
     // cosine weighted sample accounts for Lambert's Law
     int seed = getSeed(paths[pathId].bounce, frameIndex[0]);
-    float3 reflect = randCosHemisphereSample(hitRecord.normal.xyz, pixelIndex, seed);
+    float3 reflect = randCosHemisphereSample(hitRecord.normal, pixelIndex, seed);
     paths[pathId].direction = float4(reflect, 0);
     paths[pathId].bounce++;
 
     // Lambertian Diffuse BRDF
-    paths[pathId].throughput *= materialData.albedo / PI;
+    paths[pathId].throughput *= hitRecord.albedo / PI;
    
     // add path to continue
     uint prevIndex = pathsContinueCounter.IncrementCounter();

@@ -30,8 +30,8 @@ public struct GameObjectData
 
 public struct MaterialData
 {
-    public Vector4 albedo;
     public uint type;
+    public Vector4 albedo;
     private Vector3 padding;
     // float metallic;
     // float roughness;
@@ -41,10 +41,10 @@ public struct MaterialData
 public struct PathHitRecord
 {
     public float t;
-    public float u;
-    public float v;
-    public uint materialIndex;
-    public Vector4 normal;
+    public uint materialType;
+    public Vector4 albedo;
+    public Vector3 normal;
+    private Vector3 padding;
 }
 
 public struct PathPayload
@@ -55,10 +55,17 @@ public struct PathPayload
     public Vector4 throughput;
 }
 
-// TODO: Create vertex struct to hold attributes, triangle references vertex index
 public struct Triangle
 {
-    public Vector4 position0;
-    public Vector4 position1;
-    public Vector4 position2;
+    public uint v0;
+    public uint v1;
+    public uint v2;
+    private uint padding;
+}
+
+public struct Vertex
+{
+    public Vector3 position;
+    public Vector3 normal;
+    public Vector2 albedoUV;
 }

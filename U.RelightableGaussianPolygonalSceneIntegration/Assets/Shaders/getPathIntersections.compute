@@ -8,6 +8,8 @@ StructuredBuffer<GameObjectData> gameObjectDatas;
 int gameObjectDataCount;
 StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
+StructuredBuffer<Vertex> vertices;
+StructuredBuffer<MaterialData> materialDatas;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 
@@ -38,8 +40,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         for (uint j = 0; j < aabb.triangleCount; j++)
         {
             Triangle tri = triangles[aabb.triangleStartIndex + j];
-            float3 aToB = (tri.positions[1] - tri.positions[0]).xyz;
-            float3 aToC = (tri.positions[2] - tri.positions[0]).xyz;
+            float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
+            float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
             float3 p = cross(pathDirObjSpace, aToC);
 
             float det  = dot(p, aToB);
@@ -50,7 +52,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             float invDet = rcp(det);
 
-            float3 aToOrigin = pathOriginObjSpace - tri.positions[0].xyz;
+            float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
             float u = dot(p, aToOrigin) * invDet;
             if (u < 0 || u > 1)
             {
@@ -69,13 +71,26 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             if (t < closestHit.t && t > 0)
             {
                 closestHit.t = t;
-                closestHit.u = u;
-                closestHit.v = v;
-                closestHit.materialIndex = currGameObj.materialIndex;
 
-                float4 normal = mul(currGameObj.normalMatrix, float4(cross(aToB, aToC), 0));
-                normal.w = 0;
-                closestHit.normal = normalize(normal);
+                MaterialData mat = materialDatas[currGameObj.materialIndex];
+                closestHit.materialType = mat.type;
+
+                float w = 1 - u - v;
+                if (mat.type < 2)
+                {
+                    closestHit.albedo = mat.albedo;
+                }
+                else
+                {
+                    // interpolate texture!
+                    // w, u, v
+                }
+
+                // float4 normal = mul(currGameObj.normalMatrix, float4(cross(aToB, aToC), 0));
+                // normal.w = 0;
+                // closestHit.normal = normalize(normal);
+                float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
+                closestHit.normal = normalize(normal.xyz);
             }
         }
     }
