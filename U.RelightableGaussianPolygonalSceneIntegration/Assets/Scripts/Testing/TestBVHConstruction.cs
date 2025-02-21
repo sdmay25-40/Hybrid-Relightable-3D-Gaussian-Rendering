@@ -239,8 +239,7 @@ public class TestBVHConstruction : MonoBehaviour
         Debug.Log("Test 8: " + (tst8Pass ? "Pass" : "Fail"));
 
         bool tst9Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex2, mf2);
-        Debug.Log("Test 9: " + (tst9Pass ? "Pass" : "Fail"));
-        
+        Debug.Log("Test 9: " + (tst9Pass ? "Pass" : "Fail"));        
     }
 
     // Update is called once per frame

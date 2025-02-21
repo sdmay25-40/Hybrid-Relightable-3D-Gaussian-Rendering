@@ -120,10 +120,10 @@ public class SceneSerializer : MonoBehaviour
         aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
         materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
         trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
-
         commandBuffer.SetBufferData<GameObjectData>(gameObjectDatasBuffer, gameObjectDatas);
         commandBuffer.SetBufferData<AABB>(aabbsBuffer, aabbs);
         commandBuffer.SetBufferData<MaterialData>(materialDatasBuffer,materialDatas);
         commandBuffer.SetBufferData<Triangle>(trianglesBuffer, triangles);
+
     }
 }

@@ -57,24 +57,24 @@ public static class BuildBVH
             // Add triangle to proper side
             if(onLeft){
                 leftBoxTris.Add(tri);
-                left.min = Vector3.Min(left.min, mesh.transform.TransformPoint(vert0));
-                left.min = Vector3.Min(left.min, mesh.transform.TransformPoint(vert1));
-                left.min = Vector3.Min(left.min, mesh.transform.TransformPoint(vert2));
+                left.min = Vector3.Min(left.min, vert0);
+                left.min = Vector3.Min(left.min, vert1);
+                left.min = Vector3.Min(left.min, vert2);
 
-                left.max = Vector3.Max(left.max, mesh.transform.TransformPoint(vert0));
-                left.max = Vector3.Max(left.max, mesh.transform.TransformPoint(vert1));
-                left.max = Vector3.Max(left.max, mesh.transform.TransformPoint(vert2));    
+                left.max = Vector3.Max(left.max, vert0);
+                left.max = Vector3.Max(left.max, vert1);
+                left.max = Vector3.Max(left.max, vert2);    
 
             }
             else{          
                 rightBoxTris.Add(tri);
-                right.min = Vector3.Min(right.min, mesh.transform.TransformPoint(vert0));
-                right.min = Vector3.Min(right.min, mesh.transform.TransformPoint(vert1));
-                right.min = Vector3.Min(right.min, mesh.transform.TransformPoint(vert2));
+                right.min = Vector3.Min(right.min, vert0);
+                right.min = Vector3.Min(right.min, vert1);
+                right.min = Vector3.Min(right.min, vert2);
 
-                right.max = Vector3.Max(right.max, mesh.transform.TransformPoint(vert0));
-                right.max = Vector3.Max(right.max, mesh.transform.TransformPoint(vert1));
-                right.max = Vector3.Max(right.max, mesh.transform.TransformPoint(vert2)); 
+                right.max = Vector3.Max(right.max, vert0);
+                right.max = Vector3.Max(right.max, vert1);
+                right.max = Vector3.Max(right.max, vert2); 
             } 
         }
 
@@ -197,9 +197,6 @@ public static class BuildBVH
             Vector3 vert0 = mesh.sharedMesh.vertices[vert0Idx];
             Vector3 vert1 = mesh.sharedMesh.vertices[vert1Idx];
             Vector3 vert2 = mesh.sharedMesh.vertices[vert2Idx];
-            vert0 = mesh.transform.TransformPoint(vert0);
-            vert1 = mesh.transform.TransformPoint(vert1);
-            vert2 = mesh.transform.TransformPoint(vert2);
 
             root.min = Vector3.Min(root.min, vert0);
             root.min = Vector3.Min(root.min, vert1);

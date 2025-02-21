@@ -14,19 +14,21 @@ RWStructuredBuffer<uint> pathsContinueTmpCounter;
 RWStructuredBuffer<uint> stackBuffer;
 
 // Create a new empty stack
-Stack stackInit(uint pathId){
+Stack stackInit(uint pathId, uint stackTop){
     Stack s;
-    s.size = 0;
-    s.headIndex = -1;
+    s.size = 1u;
+    s.headIndex = 1u;
     s.pathId = pathId;
+    stackBuffer[s.headIndex + (s.pathId * STACK_MAX_SIZE)] = stackTop;
+
 
     return s;
 }
 
 // Push an item onto a stack
 Stack stackPush(Stack s, uint toPush){
-    s.size += 1;
-    s.headIndex += 1;
+    s.size += 1u;
+    s.headIndex += 1u;
     stackBuffer[s.headIndex + (s.pathId * STACK_MAX_SIZE)] = toPush;
 
     return s;
@@ -39,8 +41,8 @@ uint stackPeek(Stack s){
 
 // Remove the top item from the stack
 Stack stackPop(Stack s){
-    s.size -= 1;
-    s.headIndex -= 1;
+    s.size -= 1u;
+    s.headIndex -= 1u;
 
     return s;
 }
@@ -59,17 +61,21 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     PathHitRecord closestHit = pathHitRecords[pathId];
     closestHit.t = FLT_MAX;
 
+
     for (int i = 0; i < gameObjectDataCount; i++)
     {
         GameObjectData currGameObj = gameObjectDatas[i];
-        float3 pathOriginObjSpace = (float3) mul(currGameObj.worldToObject, path.origin);
-        float3 pathDirObjSpace = (float3) mul(currGameObj.worldToObject, path.direction);
+        PathPayload pathObjSpace;
+        pathObjSpace.origin = mul(currGameObj.worldToObject, path.origin);
+        pathObjSpace.direction = mul(currGameObj.worldToObject, path.direction);
+        float3 pathOriginObjSpace = (float3) pathObjSpace.origin;
+        float3 pathDirObjSpace = (float3) pathObjSpace.direction;
 
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
             
         // Create a stack and add the root to it.
-        Stack s = stackInit(id.x);
-        s = stackPush(s, currGameObj.aabbRootIndex);  
+        Stack s = stackInit(id.x, currGameObj.aabbRootIndex);
+
 
 
         while(s.size > 0){
@@ -78,10 +84,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             s = stackPop(s);
             AABB aabb = aabbs[currAABBIndex];
 
+
             // If the ray intersects this AABB
-            if(rayAABBIntersect(path, aabb)){
+            if(rayAABBIntersect(pathObjSpace, aabb)){
                 // If this is a leaf node check for triangle intersections
-                if(aabb.triangleCount < 4294967295u){
+                if(aabb.triangleCount < 4294967295U){
                     // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
                     for (uint j = 0; j < aabb.triangleCount; j++)
                     {

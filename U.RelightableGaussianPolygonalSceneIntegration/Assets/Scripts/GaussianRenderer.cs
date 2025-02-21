@@ -55,6 +55,7 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer stackBuffer;
 
+
     private int gameObjectDataCount;
 
     private void Awake()
@@ -88,7 +89,9 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
         SceneSerializer.GetSceneData(ref commandBuffer, ref gameObjectDatas, ref gameObjectDataCount, ref aabbs, ref materialDatas, ref triangles);
+
         BuildCommandBuffer();
+
     }
 
     private void Update()
@@ -214,6 +217,7 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "stackBuffer", stackBuffer);
+
                 commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
 
