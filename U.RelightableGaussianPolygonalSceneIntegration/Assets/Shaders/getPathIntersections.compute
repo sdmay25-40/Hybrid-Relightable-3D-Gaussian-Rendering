@@ -47,7 +47,7 @@ Stack stackPop(Stack s){
     return s;
 }
 
-[numthreads(32,1,1)]
+[numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     if (id.x > pathsContinueCounterValue[0])
@@ -143,12 +143,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
 
     }
-    
+   
     if (closestHit.t < FLT_MAX)
     {
+        pathHitRecords[pathId] = closestHit;
+
         uint prevIndex = pathsContinueTmpCounter.IncrementCounter();
         pathsContinueTmpCounter[prevIndex] = pathId;
     }
-
-    pathHitRecords[pathId] = closestHit;
 }
