@@ -46,42 +46,6 @@ public class SceneSerializer : MonoBehaviour
 
                 // we are only creating one AABB per mesh atm so aabb is root
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);
-
-                int[] meshTriangles = meshFilter.sharedMesh.triangles;
-
-                AABB aabb = new AABB();
-                aabb.triangleStartIndex = (uint) triangles.Count;
-                aabb.triangleCount = (uint) meshTriangles.Length / 3;
-
-                Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-                Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-
-                for(int i = 0; i < meshTriangles.Length; i+=3)
-                {
-                    Vector3 position0 = meshFilter.sharedMesh.vertices[meshTriangles[i]];
-                    Vector3 position1 = meshFilter.sharedMesh.vertices[meshTriangles[i+1]];
-                    Vector3 position2 = meshFilter.sharedMesh.vertices[meshTriangles[i+2]];
-
-                    Triangle t;
-                    t.position0 = new Vector4(position0.x, position0.y, position0.z, 1);
-                    t.position1 = new Vector4(position1.x, position1.y, position1.z, 1);
-                    t.position2 = new Vector4(position2.x, position2.y, position2.z, 1);
-                    triangles.Add(t);
-
-                    min = Vector3.Min(min, position0);
-                    min = Vector3.Min(min, position1);
-                    min = Vector3.Min(min, position2);
-                    max = Vector3.Max(max, position0);
-                    max = Vector3.Max(max, position1);
-                    max = Vector3.Max(max, position2);
-                }
-
-                aabb.min = min;
-                aabb.max = max;
-                aabb.leftChildIndex = uint.MaxValue;
-                aabb.rightChildIndex = uint.MaxValue;
-
-                aabbs.Add(aabb);
             }
             else
             {

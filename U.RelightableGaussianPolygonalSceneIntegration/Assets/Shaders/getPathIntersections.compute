@@ -65,18 +65,16 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     for (int i = 0; i < gameObjectDataCount; i++)
     {
         GameObjectData currGameObj = gameObjectDatas[i];
+        float3 pathOriginObjSpace = mul(currGameObj.worldToObject, float4(path.origin,1)).xyz;
+        float3 pathDirObjSpace = mul(currGameObj.worldToObject, path.direction).xyz;
         PathPayload pathObjSpace;
-        pathObjSpace.origin = mul(currGameObj.worldToObject, path.origin);
-        pathObjSpace.direction = mul(currGameObj.worldToObject, path.direction);
-        float3 pathOriginObjSpace = (float3) pathObjSpace.origin;
-        float3 pathDirObjSpace = (float3) pathObjSpace.direction;
+        pathObjSpace.origin = pathOriginObjSpace;
+        pathObjSpace.direction = float4(pathDirObjSpace, 1);
 
         AABB aabb = aabbs[currGameObj.aabbRootIndex];
             
         // Create a stack and add the root to it.
         Stack s = stackInit(id.x, currGameObj.aabbRootIndex);
-
-
 
         while(s.size > 0){
             // Take top AABB off the stack
@@ -89,12 +87,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             if(rayAABBIntersect(pathObjSpace, aabb)){
                 // If this is a leaf node check for triangle intersections
                 if(aabb.triangleCount < 4294967295U){
-                    // Ray-triangle intersection source: https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+                    // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
                     for (uint j = 0; j < aabb.triangleCount; j++)
                     {
                         Triangle tri = triangles[aabb.triangleStartIndex + j];
-                        float3 aToB = (float3) (tri.positions[1] - tri.positions[0]);
-                        float3 aToC = (float3) (tri.positions[2] - tri.positions[0]);
+                        float3 aToB = (tri.positions[1] - tri.positions[0]).xyz;
+                        float3 aToC = (tri.positions[2] - tri.positions[0]).xyz;
                         float3 p = cross(pathDirObjSpace, aToC);
 
                         float det  = dot(p, aToB);
@@ -103,9 +101,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                             continue;
                         }
 
-                        float invDet = 1 / det;
+                        float invDet = rcp(det);
 
-                        float3 aToOrigin = pathOriginObjSpace - (float3) tri.positions[0];
+                        float3 aToOrigin = pathOriginObjSpace - tri.positions[0].xyz;
                         float u = dot(p, aToOrigin) * invDet;
                         if (u < 0 || u > 1)
                         {
@@ -121,14 +119,16 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
                         float t = dot(q, aToC) * invDet;
 
-                       
-
-                        if (t < closestHit.t)
+                        if (t < closestHit.t && t > 0)
                         {
                             closestHit.t = t;
                             closestHit.u = u;
                             closestHit.v = v;
                             closestHit.materialIndex = currGameObj.materialIndex;
+
+                            float4 normal = mul(currGameObj.normalMatrix, float4(cross(aToB, aToC), 0));
+                            normal.w = 0;
+                            closestHit.normal = normalize(normal);
                         }
                     }
                 }

@@ -1,11 +1,7 @@
 #define FLT_MAX 3.402823e+38
-<<<<<<< HEAD
 #define UINT_MAX 4294967295U
-#define EPSILON 0.001
-=======
 #define EPSILON 1e-6
 #define PI 3.14159265359
->>>>>>> main
 
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
