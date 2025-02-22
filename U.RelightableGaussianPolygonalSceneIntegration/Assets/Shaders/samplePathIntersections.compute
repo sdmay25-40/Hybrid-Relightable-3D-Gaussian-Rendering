@@ -25,7 +25,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
 
-    if (hitRecord.materialType == 1) // emissive
+    if (hitRecord.materialType == MATERIAL_EMISSIVE)
     {
         // TODO: write to texture; += causes access issues w/ pathsPerPixel > 1
         // float invPathsPerPixel = 1.0 / pathsPerPixel;

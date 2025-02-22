@@ -2,6 +2,10 @@
 #define EPSILON 1e-6
 #define PI 3.14159265359
 
+#define MATERIAL_DIFFUSE 0
+#define MATERIAL_EMISSIVE 1
+#define MATERIAL_TEXTURED 2
+
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 struct AABB
@@ -34,7 +38,8 @@ struct MaterialData
 {
     uint type;
     float4 albedo;
-    float3 padding;
+    uint albedoTextureIndex;
+    float2 padding;
 };
 
 struct PathHitRecord
@@ -66,7 +71,7 @@ struct Vertex
 {
     float3 position;
     float3 normal;
-    float2 albedoUv;
+    float2 albedoUV;
 };
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>

@@ -1,5 +1,12 @@
 using UnityEngine;
 
+public enum MaterialType : uint
+{
+    Diffuse = 0,
+    Emissive = 1,
+    Textured = 2
+}
+
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 public struct AABB
@@ -30,12 +37,10 @@ public struct GameObjectData
 
 public struct MaterialData
 {
-    public uint type;
+    public MaterialType type;
     public Vector4 albedo;
-    private Vector3 padding;
-    // float metallic;
-    // float roughness;
-    // ...
+    public uint albedoTextureIndex;
+    private Vector2 padding;
 }
 
 public struct PathHitRecord

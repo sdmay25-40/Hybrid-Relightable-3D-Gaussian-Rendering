@@ -10,6 +10,8 @@ StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
 StructuredBuffer<Vertex> vertices;
 StructuredBuffer<MaterialData> materialDatas;
+Texture2DArray<float4> textures;
+SamplerState samplertextures;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 
@@ -76,14 +78,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 closestHit.materialType = mat.type;
 
                 float w = 1 - u - v;
-                if (mat.type < 2)
+                if (mat.type != MATERIAL_TEXTURED)
                 {
                     closestHit.albedo = mat.albedo;
                 }
                 else
                 {
-                    // interpolate texture!
-                    // w, u, v
+                    float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
+                    closestHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
                 }
 
                 // float4 normal = mul(currGameObj.normalMatrix, float4(cross(aToB, aToC), 0));

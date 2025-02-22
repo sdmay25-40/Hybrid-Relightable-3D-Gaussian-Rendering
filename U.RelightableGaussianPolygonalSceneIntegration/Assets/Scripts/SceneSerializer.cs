@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref Texture2DArray texture2DArray)
     {
         // init camera buffer        
         cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
@@ -19,6 +19,7 @@ public class SceneSerializer : MonoBehaviour
         List<MaterialData> materialDatas = new List<MaterialData>();
         List<Triangle> triangles = new List<Triangle>();
         List<Vertex> vertices = new List<Vertex>();
+        List<Texture2D> textures = new List<Texture2D>();
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
@@ -107,24 +108,37 @@ public class SceneSerializer : MonoBehaviour
                 materialIndex = (uint)materialDatas.Count;
                 materialInstanceToMaterialData.Add(materialInstanceId, materialDatas.Count);
 
-                Material meshMaterial = meshRenderer.sharedMaterial;
+                MaterialData materialData = new MaterialData();
 
-                uint materialType = 0;
-                Color albedo = meshMaterial.GetColor("_Color");
-                if (meshMaterial.IsKeywordEnabled("_EMISSION"))
+                MaterialType materialType = MaterialType.Diffuse;
+                Material mat = meshRenderer.sharedMaterial;
+
+                // albedo
+                Color albedo = mat.GetColor("_Color");
+
+                // albedo texture
+                Texture2D albedoTexture = mat.GetTexture("_MainTex") as Texture2D;
+                if (albedoTexture != null)
                 {
-                    Color emissionColor = meshMaterial.GetColor("_EmissionColor");
+                    materialType = MaterialType.Textured;
+                    materialData.albedoTextureIndex = (uint) textures.Count;
+                    textures.Add(albedoTexture);
+                }
+
+                // emission
+                if (mat.IsKeywordEnabled("_EMISSION"))
+                {
+                    Color emissionColor = mat.GetColor("_EmissionColor");
                     if (emissionColor != Color.black)
                     {
-                        materialType = 1;
+                        materialType = MaterialType.Emissive;
                         albedo = emissionColor;
                     }
                 }
 
-                MaterialData materialData = new MaterialData();
-                materialData.albedo = new Vector4(albedo.r, albedo.g, albedo.b, albedo.a);
                 materialData.type = materialType;
-
+                materialData.albedo = new Vector4(albedo.r, albedo.g, albedo.b, albedo.a);
+ 
                 materialDatas.Add(materialData);
             }
             else
@@ -134,6 +148,25 @@ public class SceneSerializer : MonoBehaviour
             currGameObj.materialIndex = materialIndex;
 
             gameObjectDatas.Add(currGameObj);
+        }
+
+        // create texture 2D array
+        texture2DArray = null;
+        if (textures.Count > 0)
+        {
+            int texWidth = textures[0].width;
+            int texHeight = textures[0].width;
+            int texCount = textures.Count;
+            TextureFormat texFormat = textures[0].format;
+            texture2DArray = new Texture2DArray(texWidth, texHeight, texCount, texFormat, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Repeat
+            };
+            for (int i = 0; i < texCount; i++)
+            {
+                Graphics.CopyTexture(textures[i], 0, 0, texture2DArray, i, 0);
+            }
         }
 
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));

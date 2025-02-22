@@ -29,6 +29,7 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
     private ComputeBuffer vertices;
+    private Texture2DArray textures;
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer cameraData;
     private MeshRenderer[] meshRenderers;
@@ -73,7 +74,7 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
-        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref textures);
         BuildCommandBuffer();
     }
 
@@ -169,6 +170,11 @@ public class GaussianRenderer : MonoBehaviour
             vertices.Release();
             vertices = null;
         }
+        if (textures != null)
+        {
+            Destroy(textures);
+            textures = null;
+        }
     }
 
     /// <summary>
@@ -217,6 +223,7 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "triangles", triangles);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "vertices", vertices);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "materialDatas", materialDatas);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "textures", textures);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
