@@ -74,6 +74,42 @@ struct Vertex
     float2 albedoUV;
 };
 
+
+struct Gaussian3D{
+
+    float3 pos;
+
+    float4x4 cov;
+    
+    float4x4 invCov;
+    
+    float4 color;
+    
+    // Index of Spherical harmonics coefficients in buffer
+    uint shCoefficientsIndex;
+    // Number of spherical harmonics coefficients
+    uint shCoefficientsNum;
+
+    float3 normal;
+
+    // PBR Propeties (Color is used for albedo)
+    float roughness;
+    float metalness;
+    float specular;
+    float opacity;
+    float ambientOcclusion;
+    float refraction;
+    float emissive;
+
+    /*
+    Used like an enum  to denote what type of Gaussian (in the .ply file) this is
+    0 = simpleGaussian3D
+    1 = gaussian3D
+    2 = relightableGaussian3D
+    */
+    uint gaussianType;
+};
+
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>
 uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)
 {
