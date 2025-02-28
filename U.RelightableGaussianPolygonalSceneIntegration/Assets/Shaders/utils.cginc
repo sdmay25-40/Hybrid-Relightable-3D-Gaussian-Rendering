@@ -1,6 +1,7 @@
 #define FLT_MAX 3.402823e+38
 #define EPSILON 1e-6
 #define PI 3.14159265359
+#define EULER_NUM 2.71828
 
 #define MATERIAL_DIFFUSE 0
 #define MATERIAL_EMISSIVE 1
@@ -109,6 +110,7 @@ struct Gaussian3D{
     */
     uint gaussianType;
 };
+
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>
 uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)

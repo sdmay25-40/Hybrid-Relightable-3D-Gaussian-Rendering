@@ -169,11 +169,14 @@ public class SceneSerializer : MonoBehaviour
             }
         }
 
+
+
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
         aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
         materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
         trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
         verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
+        
 
         gameObjectDatasBuffer.SetData(gameObjectDatas);
         aabbsBuffer.SetData(aabbs);

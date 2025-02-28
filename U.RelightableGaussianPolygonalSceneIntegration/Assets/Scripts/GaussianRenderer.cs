@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System;
 
 public class GaussianRenderer : MonoBehaviour
 {
@@ -9,12 +10,14 @@ public class GaussianRenderer : MonoBehaviour
     [SerializeField] private Camera cam;
     [SerializeField] private ComputeShader generatePrimaryPaths;
     [SerializeField] private ComputeShader getPathIntersections;
+    [SerializeField] private ComputeShader accumulatePathTransmittance;
     [SerializeField] private ComputeShader samplePathIntersections;
     [SerializeField] private ComputeShader accumulateRenderTexture;
     [SerializeField] private ComputeShader increment;
     // settings
     [SerializeField] private int pathsPerPixel = 1;
     [SerializeField] private int pathBounceLimit = 1;
+    [SerializeField] private string gaussianModelPath = "";
     private CommandBuffer commandBuffer;
     private RenderTexture renderTexture;
     private RenderTexture accumulationTexture;
@@ -32,8 +35,11 @@ public class GaussianRenderer : MonoBehaviour
     private Texture2DArray textures;
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer cameraData;
+    private ComputeBuffer gaussiansBuffer;
+    private RenderTexture gaussianTexture;
     private MeshRenderer[] meshRenderers;
     private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
+    private List<BaseGaussian3D.PasssableGaussian3D> gaussians;
 
     private void Awake()
     {
@@ -70,6 +76,22 @@ public class GaussianRenderer : MonoBehaviour
         pathsContinueCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsContinueTmpCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
+
+        gaussianTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
+        gaussianTexture.enableRandomWrite = true;
+        if (!gaussianTexture.Create())
+        {
+            Debug.LogError("'GaussianRender': Failed to create 'RenderTexture'.");
+        }
+
+        // TODO: Add a function to the parser which directly returns passable gaussians
+        gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
+        BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/" + gaussianModelPath);
+        foreach(BaseGaussian3D g in gaussiansTmp){
+            gaussians.Add(g.GetPassableStruct());
+        }
+        gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
+        gaussiansBuffer.SetData(gaussians);
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
@@ -175,6 +197,17 @@ public class GaussianRenderer : MonoBehaviour
             Destroy(textures);
             textures = null;
         }
+        if(gaussiansBuffer != null)
+        {
+            gaussiansBuffer.Release();
+            gaussiansBuffer = null;
+        }
+        if(gaussianTexture != null)
+        {
+            gaussianTexture.Release();
+            gaussianTexture = null;
+
+        }
     }
 
     /// <summary>
@@ -184,7 +217,7 @@ public class GaussianRenderer : MonoBehaviour
     private void BuildCommandBuffer()
     {
         // reset values
-        commandBuffer.SetRenderTarget(renderTexture);
+        commandBuffer.SetRenderTarget(gaussianTexture);
         commandBuffer.ClearRenderTarget(true, true, Color.black);
         commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
 
@@ -249,20 +282,39 @@ public class GaussianRenderer : MonoBehaviour
             }
         }
 
+
+        // TODO: This should occur for bounced rays as well
+        // Accumulate color from Gaussians 
+        {
+            int kernelIndex = accumulatePathTransmittance.FindKernel("CSMain");
+            commandBuffer.SetComputeBufferParam(accumulatePathTransmittance, kernelIndex, "paths", paths);
+            commandBuffer.SetComputeBufferParam(accumulatePathTransmittance, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
+            commandBuffer.SetComputeBufferParam(accumulatePathTransmittance, kernelIndex, "pathsContinueCounterValue", pathsContinueCounterValue);
+            commandBuffer.SetComputeBufferParam(accumulatePathTransmittance, kernelIndex, "pathHitRecords", pathHitRecords);
+            commandBuffer.SetComputeBufferParam(accumulatePathTransmittance, kernelIndex, "gaussiansBuffer", gaussiansBuffer);
+            commandBuffer.SetComputeTextureParam(accumulatePathTransmittance, kernelIndex, "gaussianTexture", gaussianTexture);
+            commandBuffer.SetComputeIntParam(accumulatePathTransmittance, "gaussianCount", gaussians.Count);
+            commandBuffer.SetComputeIntParam(accumulatePathTransmittance, "pathCount", paths.count);
+            commandBuffer.SetComputeIntParam(accumulatePathTransmittance, "pathsPerPixel", pathsPerPixel);
+            commandBuffer.SetComputeIntParam(accumulatePathTransmittance, "screenWidth", Screen.width);
+            commandBuffer.DispatchCompute(accumulatePathTransmittance, kernelIndex, threadGroupX, 1, 1);
+
+        }
+
         // accumulate render texture
         {
             int kernelIndex = accumulateRenderTexture.FindKernel("CSMain");
             int threadGroupsX = Mathf.CeilToInt(renderTexture.width / 32.0f);
             int threadGroupsY = Mathf.CeilToInt(renderTexture.height / 32.0f);
             commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenWidth", Screen.width);
-            commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenHeight", Screen.height);
             commandBuffer.SetComputeBufferParam(accumulateRenderTexture, kernelIndex, "frameIndex", frameIndex);
             commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "renderTexture", renderTexture);
             commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "accumulationTexture", accumulationTexture);
+            commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenHeight", Screen.height);
             commandBuffer.DispatchCompute(accumulateRenderTexture, kernelIndex, threadGroupsX, threadGroupsY, 1);
         }
 
-        commandBuffer.Blit(accumulationTexture, null as RenderTexture);
+        commandBuffer.Blit(gaussianTexture, null as RenderTexture);
 
         // increment frame index
         {

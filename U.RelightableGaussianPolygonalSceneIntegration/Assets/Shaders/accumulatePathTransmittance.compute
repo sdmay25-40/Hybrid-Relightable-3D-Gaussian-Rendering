@@ -1,5 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
+#include "utils.cginc"
 
 #define T_MIN 0.1
 
@@ -8,18 +9,21 @@ StructuredBuffer<uint> pathsContinueCounter;
 StructuredBuffer<uint> pathsContinueCounterValue;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
-int gaussianCount;
 RWStructuredBuffer<Gaussian3D> gaussiansBuffer;
-RWStructuredBuffer<Gaussian3D> colorAccumulation;
+RWTexture2D<float4> gaussianTexture;
+int pathCount;
+int gaussianCount;
+int screenWidth;
+int pathsPerPixel;
 
 
 // TODO: I think this is the equivalent of the opacity function but I need to research that
-float opacityAtPoint(float4 pos, Gaussian gauss){
-    float4x1 x = float4(gauss.pos.x, gauss.pos.y, gauss.pos.z, 1) - pos;
-    x = abs(x);
+float opacityAtPoint(float3 pos, Gaussian3D gauss){
+    float4x1 gaussianCenterPosDiffMatrix = float4((gauss.pos - pos).xyz, 1);
+    gaussianCenterPosDiffMatrix = abs(gaussianCenterPosDiffMatrix);
                 
-    float4 intermediateX = mul(gauss.invCov, x);
-    float exponent = -0.5 * mul(transpose(x), intermediateX);
+    float4 gaussianCenterPosDiffMatrixTimesInvCov = mul(gauss.invCov, gaussianCenterPosDiffMatrix);
+    float exponent = -0.5 * mul(transpose(gaussianCenterPosDiffMatrix), gaussianCenterPosDiffMatrixTimesInvCov);
     float g = pow(EULER_NUM, exponent);
 
     return g;
@@ -29,43 +33,56 @@ float opacityAtPoint(float4 pos, Gaussian gauss){
 [numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    if (id.x > pathsContinueCounterValue[0])
+    if (id.x > (uint) pathCount)
     {
         return;
     }
 
+    uint2 pixelIndex = getPixelIndex(id.x, pathsPerPixel, screenWidth);
     PathPayload path = paths[id.x];
 
     float transmittance = 1;
-    float color = 0;
+    float4 color = 0;
 
     // TODO: Check for intersections with Gaussians' BVH 
     for(int i =0; i < gaussianCount; i++){
         // Find intersection point 
         // a, b, and c are just temporary variables to break up the calculation.
-        float4x1 a = transpose(gaussiansBuffer[i].pos - path.origin);
-        float4 b = gaussiansBuffer[i].cov * path.direction;
-        float tjNumerator = a * b;
-        float4x1 c = transpose(path.direction)
-        float tjDenominator = c * b;
+    
+        // Values for numerator and denominator 
+        float4 pathDirectionVec4 = float4(path.direction.xyz, 1);
+        float4x1 pathDirectionMatrix = pathDirectionVec4;
+        float4x1 covTimesDirection = mul(gaussiansBuffer[i].cov, pathDirectionVec4);
+
+        // Numerator Calc
+        float4x1 bufferOriginDif = float4((gaussiansBuffer[i].pos - path.origin).xyz, 1);
+        float1x4 bufferOriginDifTranspose = transpose(bufferOriginDif);
+        float tjNumerator = mul(bufferOriginDifTranspose, covTimesDirection);
+
+        // Denominator Calc
+        float1x4 pathDirectionMatrixTranspose = transpose(pathDirectionMatrix);
+        float tjDenominator = mul(pathDirectionMatrixTranspose, covTimesDirection);
+
+        // Division
         float tj = tjNumerator / tjDenominator;
 
-        float4 rx = path.origin + (tj * path.direction);
+        // rx is the point where this Gaussian has maximum influence on this Gaussian
+        float3 rx = path.origin + (tj * float3(path.direction.xyz));
 
         // TODO: I think this is the equivalent of the opacity function but I need to research that
         float contribution = opacityAtPoint(rx, gaussiansBuffer[i]);
+        
 
-        // TODO: Transmittance should change based on distance from the origin
+        // TODO: Ray should accumlate color as it moves through the Gaussian
+        // TODO: Transmittance should change based on distance other gaussians between it and the origin
         // If the transmittance is above the minimum and occurs before an intersection with a mesh
-        if(transmittance > T_MIN && tj < t){
-            color += contribution * gaussiansBuffer[i].color; 
+        if(transmittance > T_MIN /*&& tj < pathHitRecords[id.x].t*/){
+           color += contribution * gaussiansBuffer[i].color;
+
         }
-
-
-
-
 
     }
 
+    gaussianTexture[pixelIndex] = color;
 
 }
