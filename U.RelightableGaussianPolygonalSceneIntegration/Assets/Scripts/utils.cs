@@ -1,5 +1,11 @@
 using UnityEngine;
 
+public enum PrimType : uint
+{
+    Triangle = 0,
+    Gaussian = 1
+}
+
 public enum MaterialType : uint
 {
     Diffuse = 0,
@@ -15,9 +21,10 @@ public struct AABB
     public Vector3 max;
     public uint leftChildIndex;
     public uint rightChildIndex;
-    public uint triangleCount; // if not a leaf node, set to uint.MaxValue
-    public uint triangleStartIndex;
-    private Vector2 padding;
+    public PrimType primitiveType;
+    public uint primitiveCount; // if not a leaf node, set to uint.MaxValue
+    public uint primitiveStartIndex;
+    private uint padding;
 }
 
 public struct CameraData

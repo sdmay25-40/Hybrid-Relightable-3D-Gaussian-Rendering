@@ -156,13 +156,11 @@ MonoBehaviour:
   cam: {fileID: 138301030}
   generatePrimaryPaths: {fileID: 7200000, guid: 69c3dbaab43622a4c81192cb21511835, type: 3}
   getPathIntersections: {fileID: 7200000, guid: c4c64515e8d610d489bd6295a2b11c26, type: 3}
-  accumulatePathTransmittance: {fileID: 7200000, guid: ff691f6cb509c4cc098b2d8a50c9bc2f, type: 3}
   samplePathIntersections: {fileID: 7200000, guid: ed12c8c072e50d2418e75410e00ee8f7, type: 3}
   accumulateRenderTexture: {fileID: 7200000, guid: 1befd23c6be3f1042ab62ed1ab848812, type: 3}
   increment: {fileID: 7200000, guid: 0279ba4e513d1b948a98c4db32c23882, type: 3}
-  pathsPerPixel: 4
+  pathsPerPixel: 1
   pathBounceLimit: 4
-  gaussianModelPath: 3D/LargeSingleGaussian.ply
 --- !u!81 &138301029
 AudioListener:
   m_ObjectHideFlags: 0
@@ -231,7 +229,7 @@ Transform:
   m_GameObject: {fileID: 138301027}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: -1}
+  m_LocalPosition: {x: 0, y: 0, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -336,7 +334,7 @@ Transform:
   m_GameObject: {fileID: 334770342}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 0.5, z: 3}
+  m_LocalPosition: {x: 0, y: 0, z: 3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -3,6 +3,9 @@
 #define PI 3.14159265359
 #define EULER_NUM 2.71828
 
+#define PRIM_TYPE_TRIANGLE 0
+#define PRIM_TYPE_GAUSSIAN 1
+
 #define MATERIAL_DIFFUSE 0
 #define MATERIAL_EMISSIVE 1
 #define MATERIAL_TEXTURED 2
@@ -15,9 +18,10 @@ struct AABB
     float3 max;
     uint leftChildIndex;
     uint rightChildIndex;
-    uint triangleCount;
-    uint triangleStartIndex;
-    float2 padding;
+    uint primitiveType;
+    uint primitiveCount;
+    uint primitiveStartIndex;
+    uint padding;
 };
 
 struct CameraData

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref Texture2DArray texture2DArray)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray texture2DArray)
     {
         // init camera buffer        
         cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
@@ -16,13 +16,14 @@ public class SceneSerializer : MonoBehaviour
         cameraData.SetData(new CameraData[]{camData});
 
         List<AABB> aabbs = new List<AABB>();
-        List<MaterialData> materialDatas = new List<MaterialData>();
         List<Triangle> triangles = new List<Triangle>();
         List<Vertex> vertices = new List<Vertex>();
+        List<MaterialData> materialDatas = new List<MaterialData>();
         List<Texture2D> textures = new List<Texture2D>();
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
+        // create game object mesh data
         meshRenderers = FindObjectsOfType<MeshRenderer>();
         foreach (MeshRenderer meshRenderer in meshRenderers)
         {
@@ -63,8 +64,9 @@ public class SceneSerializer : MonoBehaviour
                 int[] meshTriangles = mesh.triangles;
 
                 AABB aabb = new AABB();
-                aabb.triangleStartIndex = (uint) triangles.Count;
-                aabb.triangleCount = (uint) meshTriangles.Length / 3;
+                aabb.primitiveType = PrimType.Triangle;
+                aabb.primitiveStartIndex = (uint) triangles.Count;
+                aabb.primitiveCount = (uint) meshTriangles.Length / 3;
 
                 Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
                 Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
@@ -150,6 +152,42 @@ public class SceneSerializer : MonoBehaviour
             gameObjectDatas.Add(currGameObj);
         }
 
+        trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
+        trianglesBuffer.SetData(triangles);
+        verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
+        verticesBuffer.SetData(vertices);
+        materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
+        materialDatasBuffer.SetData(materialDatas);
+
+        // create Gaussian data
+        // TODO: There should be a Gaussian script to attach to game objects
+        string gaussianModelPath = "3D/LargeSingleGaussian.ply";
+        BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/" + gaussianModelPath);
+        List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
+        foreach (BaseGaussian3D g in gaussiansTmp)
+        {
+            GameObjectData currGameObj = new GameObjectData();
+            currGameObj.normalMatrix = Matrix4x4.identity;
+            currGameObj.worldToObject = Matrix4x4.identity;
+            currGameObj.aabbRootIndex = (uint)aabbs.Count;
+            gameObjectDatas.Add(currGameObj);
+            
+            AABB aabb = new AABB();
+            aabb.primitiveType = PrimType.Gaussian;
+            aabb.primitiveStartIndex = (uint)gaussians.Count;
+            aabb.primitiveCount = 1u;
+            aabbs.Add(aabb);
+
+            gaussians.Add(g.GetPassableStruct());
+        }
+
+        gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
+        gaussiansBuffer.SetData(gaussians);
+        gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
+        gameObjectDatasBuffer.SetData(gameObjectDatas);
+        aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
+        aabbsBuffer.SetData(aabbs);
+       
         // create texture 2D array
         texture2DArray = null;
         if (textures.Count > 0)
@@ -168,21 +206,6 @@ public class SceneSerializer : MonoBehaviour
                 Graphics.CopyTexture(textures[i], 0, 0, texture2DArray, i, 0);
             }
         }
-
-
-
-        gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
-        aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
-        materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
-        trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
-        verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
-        
-
-        gameObjectDatasBuffer.SetData(gameObjectDatas);
-        aabbsBuffer.SetData(aabbs);
-        materialDatasBuffer.SetData(materialDatas);
-        trianglesBuffer.SetData(triangles);
-        verticesBuffer.SetData(vertices);
     }
 
     public static void UpdateSceneDataBuffer(in Camera cam, ref ComputeBuffer cameraData, in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
@@ -198,7 +221,7 @@ public class SceneSerializer : MonoBehaviour
         {
             GameObjectData currGameObj = gameObjectDatas[i];
             Transform transform = meshRenderers[i].gameObject.transform;
-            currGameObj.normalMatrix = transform.localToWorldMatrix;
+            currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
             gameObjectDatas[i] = currGameObj;
         }

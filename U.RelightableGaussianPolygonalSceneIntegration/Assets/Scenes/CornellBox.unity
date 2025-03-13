@@ -234,7 +234,7 @@ MonoBehaviour:
   accumulateRenderTexture: {fileID: 7200000, guid: 1befd23c6be3f1042ab62ed1ab848812, type: 3}
   increment: {fileID: 7200000, guid: 0279ba4e513d1b948a98c4db32c23882, type: 3}
   pathsPerPixel: 1
-  pathBounceLimit: 2
+  pathBounceLimit: 3
 --- !u!1001 &1568246200
 PrefabInstance:
   m_ObjectHideFlags: 0
