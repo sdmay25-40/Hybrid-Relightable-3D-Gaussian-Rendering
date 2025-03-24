@@ -3,6 +3,10 @@
 #define EPSILON 1e-6
 #define PI 3.14159265359
 
+#define MATERIAL_DIFFUSE 0
+#define MATERIAL_EMISSIVE 1
+#define MATERIAL_TEXTURED 2
+
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 struct AABB
@@ -33,18 +37,19 @@ struct GameObjectData
 
 struct MaterialData
 {
-    float4 albedo;
     uint type;
-    float3 padding;
+    float4 albedo;
+    uint albedoTextureIndex;
+    float2 padding;
 };
 
 struct PathHitRecord
 {
     float t;
-    float u;
-    float v;
-    uint materialIndex;
-    float4 normal;
+    uint materialType;
+    float4 albedo;
+    float3 normal;
+    float3 padding;
 };
 
 struct PathPayload
@@ -57,7 +62,17 @@ struct PathPayload
 
 struct Triangle
 {
-    float4 positions[3];
+    uint v0;
+    uint v1;
+    uint v2;
+    uint padding;
+};
+
+struct Vertex
+{
+    float3 position;
+    float3 normal;
+    float2 albedoUV;
 };
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>

@@ -14,6 +14,7 @@ public class WireframeBVHDisplay : MonoBehaviour
     {  
         List<AABB> aabbs = new List<AABB>();
         List<Triangle> triangles = new List<Triangle>();
+        List<Vertex> vertices = new List<Vertex>();
 
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
 
@@ -33,7 +34,8 @@ public class WireframeBVHDisplay : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
-                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles);
+                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles, 
+                    ref vertices);
 
                 // we are only creating one AABB per mesh atm so aabb is root
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);

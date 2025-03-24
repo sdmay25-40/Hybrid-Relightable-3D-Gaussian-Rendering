@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
+// THIS IS DEPRECATED SINCE TEXTURING HAS BEEN ADDED.
+// I MODIFIED IT TO COMPILE BUT NONE OF THE LOGIC HAS BEEN UPDATED.
 public class TestBVHConstruction : MonoBehaviour
 {
     public GameObject testObj;
@@ -86,6 +88,7 @@ public class TestBVHConstruction : MonoBehaviour
 
     private static bool TestAllTrisFoundInList(MeshFilter meshFilter, List<AABB> aabbs, List<Triangle> tris){
         List<Triangle> bvhTris = new List<Triangle>();
+        List<Vertex> bvhVerts = new List<Vertex>();
         // Get a list of all the triangles listed as being contained in an AABB
         for(int i =0; i < aabbs.Count; i++){
             // If this is a leaf node add all triangles in it to the list
@@ -97,12 +100,22 @@ public class TestBVHConstruction : MonoBehaviour
             }
         }
 
+        // Add vertex data
+        for (int i = 0; i < meshFilter.mesh.vertices.Length; i++)
+        {
+            Vertex v;
+            v.position = meshFilter.mesh.vertices[i];
+            v.normal = meshFilter.mesh.normals[i];
+            v.albedoUV = meshFilter.mesh.uv[i];
+            bvhVerts.Add(v);
+        }
+
         // For every triangle in the mesh 
         for(int i = 0; i < meshFilter.mesh.triangles.Length; i+= 3){
-            Triangle t;
-            t.position0 = Utils.Vec3ToVec4(meshFilter.mesh.vertices[meshFilter.mesh.triangles[i]]);
-            t.position1 = Utils.Vec3ToVec4(meshFilter.mesh.vertices[meshFilter.mesh.triangles[i + 1]]);
-            t.position2 = Utils.Vec3ToVec4(meshFilter.mesh.vertices[meshFilter.mesh.triangles[i + 2]]);
+            Triangle t = new Triangle();
+            t.v0 = (uint) meshFilter.mesh.triangles[i];
+            t.v1 = (uint) meshFilter.mesh.triangles[i + 1];
+            t.v2 = (uint) meshFilter.mesh.triangles[i + 2];
 
             bool bvhContains = false;
             // Check if the BVH contains this triangle
@@ -171,12 +184,13 @@ public class TestBVHConstruction : MonoBehaviour
          && CheckSubtreeWithinParent((int) aabbs[rootIndex].rightChildIndex, rootIndex, aabbs);
     }
 
-    public static bool TestAllTrianglesWithinAABB(List<AABB> aabbs, List<Triangle> tris, int currIndex, MeshFilter mesh){
+    public static bool TestAllTrianglesWithinAABB(List<AABB> aabbs, List<Triangle> tris, int currIndex, MeshFilter mesh, 
+        List<Vertex> vertices){
         // If this is a tree node
         if(aabbs[currIndex].triangleCount >= 4294967295){
             // Recursively call
-            return TestAllTrianglesWithinAABB(aabbs, tris, (int) aabbs[currIndex].leftChildIndex, mesh) 
-                && TestAllTrianglesWithinAABB(aabbs, tris, (int) aabbs[currIndex].rightChildIndex, mesh);
+            return TestAllTrianglesWithinAABB(aabbs, tris, (int) aabbs[currIndex].leftChildIndex, mesh, vertices) 
+                && TestAllTrianglesWithinAABB(aabbs, tris, (int) aabbs[currIndex].rightChildIndex, mesh, vertices);
         }
         // If this is a leaf node
         else{
@@ -184,8 +198,8 @@ public class TestBVHConstruction : MonoBehaviour
             for(int i = 0; i < aabbs[currIndex].triangleCount; i++){
 
                 if(!Utils.TriangleWithinMinMax(tris[((int) aabbs[currIndex].triangleStartIndex) + i], aabbs[currIndex].min,
-                    aabbs[currIndex].max, mesh)){
-                    Debug.Log(Utils.TriangleToString(tris[((int) aabbs[currIndex].triangleStartIndex) + i]));
+                    aabbs[currIndex].max, mesh, vertices)){
+                    Debug.Log(Utils.TriangleToString(tris[((int) aabbs[currIndex].triangleStartIndex) + i], vertices));
                     Debug.Log(Utils.AABBToString(aabbs[currIndex]));
                     return false;
                 }
@@ -206,12 +220,13 @@ public class TestBVHConstruction : MonoBehaviour
         // Build a BVH for testing
         List<AABB> aabbs = new List<AABB>();
         List<Triangle> triangles = new List<Triangle>();
+        List<Vertex> vertices= new List<Vertex>();
         MeshFilter meshFilter = testObj.GetComponent<MeshFilter>();
-        uint rootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles);
+        uint rootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles, ref vertices);
 
         MeshFilter mf2 = testObj2.GetComponent<MeshFilter>();
 
-        uint rootIndex2 = BuildBVH.BuildBVHForMesh(mf2, ref aabbs, ref triangles); 
+        uint rootIndex2 = BuildBVH.BuildBVHForMesh(mf2, ref aabbs, ref triangles, ref vertices); 
 
         // Run tests
         bool tst1Pass = TestAllTrisFoundInList(meshFilter, aabbs, triangles);
@@ -226,7 +241,7 @@ public class TestBVHConstruction : MonoBehaviour
         bool tst4Pass = TestAABBSAllWithinParent(aabbs, (int) rootIndex);
         Debug.Log("Test 4: " + (tst4Pass ? "Pass" : "Fail"));
 
-        bool tst5Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex, meshFilter);
+        bool tst5Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex, meshFilter, vertices);
         Debug.Log("Test 5: " + (tst5Pass ? "Pass" : "Fail"));
 
         bool tst6Pass = TestAllTrisFoundInList(mf2, aabbs, triangles);
@@ -238,7 +253,7 @@ public class TestBVHConstruction : MonoBehaviour
         bool tst8Pass = TestAABBSAllWithinParent(aabbs, (int) rootIndex2);
         Debug.Log("Test 8: " + (tst8Pass ? "Pass" : "Fail"));
 
-        bool tst9Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex2, mf2);
+        bool tst9Pass = TestAllTrianglesWithinAABB(aabbs, triangles, (int) rootIndex2, mf2, vertices);
         Debug.Log("Test 9: " + (tst9Pass ? "Pass" : "Fail"));        
     }
 

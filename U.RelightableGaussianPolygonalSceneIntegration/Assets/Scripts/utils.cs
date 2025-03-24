@@ -5,6 +5,13 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+public enum MaterialType : uint
+{
+    Diffuse = 0,
+    Emissive = 1,
+    Textured = 2
+}
+
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 public struct AABB
@@ -35,21 +42,19 @@ public struct GameObjectData
 
 public struct MaterialData
 {
+    public MaterialType type;
     public Vector4 albedo;
-    public uint type;
-    private Vector3 padding;
-    // float metallic;
-    // float roughness;
-    // ...
+    public uint albedoTextureIndex;
+    private Vector2 padding;
 }
 
 public struct PathHitRecord
 {
     public float t;
-    public float u;
-    public float v;
-    public uint materialIndex;
-    public Vector4 normal;
+    public uint materialType;
+    public Vector4 albedo;
+    public Vector3 normal;
+    private Vector3 padding;
 }
 
 public struct PathPayload
@@ -60,12 +65,19 @@ public struct PathPayload
     public Vector4 throughput;
 }
 
-// TODO: Create vertex struct to hold attributes, triangle references vertex index
 public struct Triangle
 {
-    public Vector4 position0;
-    public Vector4 position1;
-    public Vector4 position2;
+    public uint v0;
+    public uint v1;
+    public uint v2;
+    private uint padding;
+}
+
+public struct Vertex
+{
+    public Vector3 position;
+    public Vector3 normal;
+    public Vector2 albedoUV;
 }
 
 public static class Utils {
@@ -101,10 +113,14 @@ public static class Utils {
             + bb.leftChildIndex + ", Right Child Index: " + bb.rightChildIndex;
     }
 
-    public static string TriangleToString(Triangle tri){
-        return "{Point0: " + tri.position0.x + "," + tri.position0.y + "," + tri.position0.z  + " " +
-        "Point1: " + tri.position1.x + "," + tri.position1.y + "," + tri.position1.z  + " " +
-        "Point2: " + tri.position2.x + "," + tri.position2.y + "," + tri.position2.z  + "}";
+    public static string TriangleToString(Triangle tri, List<Vertex> vertices){
+        Vector3 vert0 = vertices[(int) tri.v0].position;
+        Vector3 vert1 = vertices[(int) tri.v1].position;
+        Vector3 vert2 = vertices[(int) tri.v2].position;
+
+        return "{Point0: " + vert0.x + "," + vert0.y + "," + vert0.z  + " " +
+        "Point1: " + vert1.x + "," + vert1.y + "," + vert1.z  + " " +
+        "Point2: " + vert2.x + "," + vert2.y + "," + vert2.z  + "}";
     }
 
     public static void WriteBVHToFile(List<AABB> toWrite, int rootIndex){
@@ -139,13 +155,13 @@ public static class Utils {
     /// false: If the two triangles aren't equal
     /// </summary>
     public static bool TriangleEquals(Triangle t1, Triangle t2){
-        List<Vector4> t1Verts = new List<Vector4>{t1.position0, t1.position1, t1. position2};
-        List<Vector4> t2Verts = new List<Vector4>{t2.position0, t2.position1, t2. position2};
+        List<uint> t1Verts = new List<uint>{t1.v0, t1.v1, t1.v2};
+        List<uint> t2Verts = new List<uint>{t2.v0, t2.v1, t2. v2};
         // Check all of the t1 verts against the t2Verts
-        foreach(Vector4 v in t1Verts){
+        foreach(uint v in t1Verts){
             bool vFound = false;
             for(int i = 0; i < t2Verts.Count; i++){
-                if(Vector4.Equals(v, t2Verts[i])){
+                if(v == t2Verts[i]){
                     vFound = true;
                     t2Verts.RemoveAt(i);
                     break;
@@ -185,10 +201,15 @@ public static class Utils {
     }
 
     // Check is a triangle is located between a minimum and maximum
-    public static bool TriangleWithinMinMax(Triangle tri, Vector3 min, Vector3 max, MeshFilter meshTriWithin){
-        if(PointWithinMinMax(meshTriWithin.transform.TransformPoint(tri.position0), min, max) 
-        && PointWithinMinMax(meshTriWithin.transform.TransformPoint(tri.position1), min, max) 
-        && PointWithinMinMax(meshTriWithin.transform.TransformPoint(tri.position2), min, max)){
+    public static bool TriangleWithinMinMax(Triangle tri, Vector3 min, Vector3 max, MeshFilter meshTriWithin,
+        List<Vertex> vertices){
+        Vector3 vert0 = vertices[(int) tri.v0].position;
+        Vector3 vert1 = vertices[(int) tri.v1].position;
+        Vector3 vert2 = vertices[(int) tri.v2].position;
+
+        if(PointWithinMinMax(meshTriWithin.transform.TransformPoint(vert0), min, max) 
+        && PointWithinMinMax(meshTriWithin.transform.TransformPoint(vert1), min, max) 
+        && PointWithinMinMax(meshTriWithin.transform.TransformPoint(vert2), min, max)){
             return true;
         }
 

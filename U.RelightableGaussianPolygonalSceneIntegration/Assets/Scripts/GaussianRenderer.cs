@@ -39,6 +39,8 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer aabbs;
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
+    private ComputeBuffer vertices;
+    private Texture2DArray textures;
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer stackBuffer;
 
@@ -87,7 +89,7 @@ public class GaussianRenderer : MonoBehaviour
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
-        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref textures);
         BuildCommandBuffer();
 
     }
@@ -164,17 +166,17 @@ public class GaussianRenderer : MonoBehaviour
             gameObjectDatas.Release();
             gameObjectDatas = null;
         }
-        if(aabbs != null)
+        if (aabbs != null)
         {
             aabbs.Release();
             aabbs = null;
         }
-        if(materialDatas != null)
+        if (materialDatas != null)
         {
             materialDatas.Release();
             materialDatas = null;
         }
-        if(triangles != null)
+        if (triangles != null)
         {
             triangles.Release();
             triangles = null;
@@ -182,6 +184,16 @@ public class GaussianRenderer : MonoBehaviour
         if(stackBuffer != null){
             stackBuffer.Release();
             stackBuffer = null;
+        }
+        if (vertices != null)
+        {
+            vertices.Release();
+            vertices = null;
+        }
+        if (textures != null)
+        {
+            Destroy(textures);
+            textures = null;
         }
     }
 
@@ -229,6 +241,9 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeIntParam(getPathIntersections, "gameObjectDataCount", gameObjectDatas.count);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "aabbs", aabbs);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "triangles", triangles);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "vertices", vertices);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "materialDatas", materialDatas);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "textures", textures);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "stackBuffer", stackBuffer);
@@ -246,7 +261,6 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueTmpCounterValue", pathsContinueTmpCounterValue);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
-                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "materialDatas", materialDatas);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "pathsPerPixel", pathsPerPixel);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "screenWidth", Screen.width);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounceLimit", pathBounceLimit);
