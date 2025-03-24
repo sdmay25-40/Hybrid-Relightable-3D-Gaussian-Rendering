@@ -15,6 +15,15 @@ SamplerState samplertextures;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 
+// TODO: Is this equivalent to the opacity function?
+/// <source> Sect. 3.1, Eq. 1 https://arxiv.org/pdf/2311.16043#page.4 </source>
+float opacityAtPoint(float3 pos, Gaussian gauss){
+    float4 pointToGaussianOrigin = float4((pos - gauss.pos), 1);
+    float4 invCovTimesPointToGaussianOrigin = mul(gauss.invCov, pointToGaussianOrigin);
+    float exponent = -0.5 * mul(transpose(pointToGaussianOrigin), invCovTimesPointToGaussianOrigin);
+    return pow(EULER_NUM, exponent);
+}
+
 [numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
@@ -100,7 +109,41 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
         else
         {
-            // TODO: ray-Gaussian intersection
+            // ray-Gaussian intersection
+
+            // TODO: will there ever be more than 1 Gaussian per BVH leaf node? : for (uint j = 0; j < aabb.primitiveCount; j++) {}
+
+            // maximum response
+            // src: Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
+            Gaussian gauss = gaussians[aabb.primitiveStartIndex];
+        
+            // Values for numerator and denominator 
+            float4 pathDirectionVec4 = float4(path.direction.xyz, 1);
+            float4x1 pathDirectionMatrix = pathDirectionVec4;
+            float4x1 covTimesDirection = mul(gaussiansBuffer[i].cov, pathDirectionVec4);
+
+            // Numerator Calc
+            float4x1 bufferOriginDif = float4((gaussiansBuffer[i].pos - path.origin).xyz, 1);
+            float1x4 bufferOriginDifTranspose = transpose(bufferOriginDif);
+            float tjNumerator = mul(bufferOriginDifTranspose, covTimesDirection);
+
+            // Denominator Calc
+            float1x4 pathDirectionMatrixTranspose = transpose(pathDirectionMatrix);
+            float tjDenominator = mul(pathDirectionMatrixTranspose, covTimesDirection);
+
+            // Division
+            float tj = tjNumerator / tjDenominator;
+
+            // rx is the point where this Gaussian has maximum influence on this Gaussian
+            float3 rx = path.origin + (tj * float3(path.direction.xyz));
+
+            float contribution = opacityAtPoint(rx, gaussiansBuffer[i]);
+
+            // If the transmittance is above the minimum and occurs before an intersection with a mesh
+            if(transmittance > T_MIN /*&& tj < pathHitRecords[id.x].t*/)
+            {
+                color += contribution * gaussiansBuffer[i].color;
+            }
         }
     }
    

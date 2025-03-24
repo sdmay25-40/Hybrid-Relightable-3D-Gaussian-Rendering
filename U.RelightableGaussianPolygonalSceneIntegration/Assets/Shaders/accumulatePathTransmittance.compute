@@ -9,16 +9,16 @@ StructuredBuffer<uint> pathsContinueCounter;
 StructuredBuffer<uint> pathsContinueCounterValue;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
-RWStructuredBuffer<Gaussian3D> gaussiansBuffer;
+RWStructuredBuffer<Gaussian> gaussiansBuffer;
 RWTexture2D<float4> gaussianTexture;
 int pathCount;
 int gaussianCount;
 int screenWidth;
 int pathsPerPixel;
 
+// src: Relightable 3D Gaussians Section 3.1, Equation 1 https://arxiv.org/pdf/2311.16043#page.4
+float opacityAtPoint(float3 pos, Gaussian gauss){
 
-// TODO: I think this is the equivalent of the opacity function but I need to research that
-float opacityAtPoint(float3 pos, Gaussian3D gauss){
     float4x1 gaussianCenterPosDiffMatrix = float4((gauss.pos - pos).xyz, 1);
     gaussianCenterPosDiffMatrix = abs(gaussianCenterPosDiffMatrix);
                 
@@ -28,6 +28,7 @@ float opacityAtPoint(float3 pos, Gaussian3D gauss){
 
     return g;
 }
+
 
 
 [numthreads(128,1,1)]
@@ -48,6 +49,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     for(int i =0; i < gaussianCount; i++){
         // Find intersection point 
         // a, b, and c are just temporary variables to break up the calculation.
+
+        // src: Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
     
         // Values for numerator and denominator 
         float4 pathDirectionVec4 = float4(path.direction.xyz, 1);
@@ -71,18 +74,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
         // TODO: I think this is the equivalent of the opacity function but I need to research that
         float contribution = opacityAtPoint(rx, gaussiansBuffer[i]);
-        
 
         // TODO: Ray should accumlate color as it moves through the Gaussian
         // TODO: Transmittance should change based on distance other gaussians between it and the origin
         // If the transmittance is above the minimum and occurs before an intersection with a mesh
-        if(transmittance > T_MIN /*&& tj < pathHitRecords[id.x].t*/){
+        if(transmittance > T_MIN /*&& tj < pathHitRecords[id.x].t*/)
+        {
            color += contribution * gaussiansBuffer[i].color;
-
         }
-
     }
 
     gaussianTexture[pixelIndex] = color;
-
 }
