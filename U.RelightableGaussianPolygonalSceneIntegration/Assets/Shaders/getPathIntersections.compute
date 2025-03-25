@@ -113,29 +113,22 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             // TODO: will there ever be more than 1 Gaussian per BVH leaf node? : for (uint j = 0; j < aabb.primitiveCount; j++) {}
 
-            // maximum response
+            // maximum gaussian contribution
             // src: Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
             Gaussian gauss = gaussians[aabb.primitiveStartIndex];
         
-            // Values for numerator and denominator 
-            float4 pathDirectionVec4 = float4(path.direction.xyz, 1);
-            float4x1 pathDirectionMatrix = pathDirectionVec4;
-            float4x1 covTimesDirection = mul(gaussiansBuffer[i].cov, pathDirectionVec4);
+            float4 covTimesPathDir = mul(gaussiansBuffer[i].cov, path.direction);
 
-            // Numerator Calc
-            float4x1 bufferOriginDif = float4((gaussiansBuffer[i].pos - path.origin).xyz, 1);
-            float1x4 bufferOriginDifTranspose = transpose(bufferOriginDif);
-            float tjNumerator = mul(bufferOriginDifTranspose, covTimesDirection);
+            float1x4 pathOriginToGaussianOriginT = transpose(float4((gaussiansBuffer[i].pos - path.origin), 1));
+            float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
 
-            // Denominator Calc
-            float1x4 pathDirectionMatrixTranspose = transpose(pathDirectionMatrix);
-            float tjDenominator = mul(pathDirectionMatrixTranspose, covTimesDirection);
+            float1x4 pathDirT = transpose(path.direction);
+            float denominator = mul(pathDirectionMatrixTranspose, covTimesPathDir);
 
-            // Division
-            float tj = tjNumerator / tjDenominator;
+            float t = numerator / denominator;
 
             // rx is the point where this Gaussian has maximum influence on this Gaussian
-            float3 rx = path.origin + (tj * float3(path.direction.xyz));
+            float3 rx = path.origin + (t * path.direction.xyz);
 
             float contribution = opacityAtPoint(rx, gaussiansBuffer[i]);
 
