@@ -105,9 +105,9 @@ public class GaussianRenderer : MonoBehaviour
 
     private void OnDestroy()
     {
-        cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
         if (commandBuffer != null)
         {
+            cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
             commandBuffer.Release();
             commandBuffer = null;
         }

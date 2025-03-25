@@ -1,22 +1,35 @@
-using System;
-using System.Collections;
+
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public static class BuildBVH 
 {   
 
-    private static readonly float COST_TRAV = 1;
-    private static readonly float COST_ITRSCT = 2;
-    private static readonly float NUM_DIVISIONS = 8;
+    private const float COST_TRAV = 1;
+    private const float COST_ITRSCT = 2;
+    private const float NUM_DIVISIONS = 8;
 
 
+    /// <summary>
+    ///  Calculate the total area of an Axis Aligned Bounding Box
+    /// </summary>
+    /// 
+    private static float CalcAABBArea(AABB calcAreaOf){
+        return (calcAreaOf.max.x - calcAreaOf.min.x) * (calcAreaOf.max.y - calcAreaOf.min.y) 
+            * (calcAreaOf.max.z - calcAreaOf.min.z);
+    }
 
+    /// <summary>
+    /// Calculate the centroid of a triangle from its 3 vertices
+    /// </summary>
+    private static Vector3 CalcTriangleCentroid(Vector3 vert1, Vector3 vert2, Vector3 vert3){
+        float xCent = (vert1.x + vert2.x + vert3.x) / 3.0f;
+        float yCent = (vert1.y + vert2.y + vert3.y) / 3.0f;
+        float zCent = (vert1.z + vert2.z + vert3.z) / 3.0f;
 
-
+        return  new Vector3(xCent, yCent, zCent);
+    }
+    
     /// <summary>
     /// Create a new Triangle struct corresponding to a triangle within a mesh
     /// and add it to the List for triangles.
@@ -39,9 +52,11 @@ public static class BuildBVH
         triangles.Add(t);
     }
 
+    /// <source>https://medium.com/@bromanz/how-to-create-awesome-accelerators-the-surface-area-heuristic-e14b5dec6160</source>
+    /// <source>https://pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies</source>
     /// <summary>
     /// Determine the triangle position, AAAB size, and cost of a split in an AABB 
-    /// </summary>
+    /// </summary> 
     private static float DetermineSplit(Vector3 pos, int axis, int[] triangles, int[] includedTriangleIdxs, 
     MeshFilter mesh, ref List<int> leftBoxTris, ref List<int> rightBoxTris, ref AABB left, ref AABB right,
     List<Vertex> vertices, int vertexStartIndex){
@@ -57,7 +72,7 @@ public static class BuildBVH
             Vector3 vert1 = vertices[triangles[tri + 1] + vertexStartIndex].position;
             Vector3 vert2 = vertices[triangles[tri + 2] + vertexStartIndex].position;
 
-            Vector3 centroid = Utils.CalcTriangleCentroid(vert0, vert1, vert2);
+            Vector3 centroid = CalcTriangleCentroid(vert0, vert1, vert2);
 
             bool onLeft = false;
 
@@ -107,12 +122,15 @@ public static class BuildBVH
 
         // Caculate the cost of this division 
         float cost = COST_TRAV + 
-            (Utils.CalcAABBArea(left) * (COST_ITRSCT * leftBoxTris.Count)) +
-            (Utils.CalcAABBArea(right) * (COST_ITRSCT * rightBoxTris.Count));
+            (CalcAABBArea(left) * (COST_ITRSCT * leftBoxTris.Count)) +
+            (CalcAABBArea(right) * (COST_ITRSCT * rightBoxTris.Count));
             
         return cost;
     }
 
+    /// <source> https://pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies </source>
+    /// *The Source was used as a guide to develop but the implthis not a one to 
+    /// one implementation.
     private static void DivideAABB(Vector3[] triangleCentroids, MeshFilter mesh, int[] triangleIdxs, 
         int divisionNum, ref AABB root, ref List<AABB> aabbList, ref List<Triangle> triangles,
         List<Vertex> vertices, int vertexStartIndex){
@@ -208,20 +226,7 @@ public static class BuildBVH
 
 
     public static uint BuildBVHForMesh(MeshFilter mesh, ref List<AABB> aabbList, ref List<Triangle> triangles, 
-        ref List<Vertex> vertices){
-        
-        // Add vertex data
-        uint vertexStartIndex = (uint) vertices.Count;
-        for (int i = 0; i < mesh.sharedMesh.vertices.Length; i++)
-        {
-            Vertex v;
-            v.position = mesh.sharedMesh.vertices[i];
-            v.normal = mesh.sharedMesh.normals[i];
-            v.albedoUV = mesh.sharedMesh.uv[i];
-            vertices.Add(v);
-        }
-        
-        
+        ref List<Vertex> vertices, uint vertexStartIndex){
         
         // Get all centroids of triangles in this mesh and set min and max
         int[] tris = new int[mesh.sharedMesh.triangles.Length / 3];
@@ -247,7 +252,7 @@ public static class BuildBVH
             root.max = Vector3.Max(root.max, vert1);
             root.max = Vector3.Max(root.max, vert2);
 
-            triangleCentroids[i / 3] =  Utils.CalcTriangleCentroid(vert0, vert1, vert2);
+            triangleCentroids[i / 3] = CalcTriangleCentroid(vert0, vert1, vert2);
             tris[i / 3] = i; 
         }
 

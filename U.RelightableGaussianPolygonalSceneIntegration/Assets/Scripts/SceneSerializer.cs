@@ -44,7 +44,20 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
-                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles, ref vertices);
+                 Mesh mesh = meshFilter.sharedMesh;
+                 // add vertex data
+                uint vertexStartIndex = (uint) vertices.Count;
+                for (int i = 0; i < mesh.vertices.Length; i++)
+                {
+                    Vertex v;
+                    v.position = mesh.vertices[i];
+                    v.normal = mesh.normals[i];
+                    v.albedoUV = mesh.uv[i];
+                    vertices.Add(v);
+                }
+
+                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles, ref vertices,
+                    vertexStartIndex);
 
                 // we are only creating one AABB per mesh atm so aabb is root
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);

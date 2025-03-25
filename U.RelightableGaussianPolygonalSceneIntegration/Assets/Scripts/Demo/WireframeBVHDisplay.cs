@@ -20,8 +20,7 @@ public class WireframeBVHDisplay : MonoBehaviour
 
         // Set up BVHs for all meshes
         MeshRenderer[] meshRenderers = FindObjectsOfType<MeshRenderer>();
-        foreach (MeshRenderer meshRenderer in meshRenderers)
-        {
+        foreach (MeshRenderer meshRenderer in meshRenderers){
 
             MeshFilter meshFilter = meshRenderer.gameObject.GetComponent<MeshFilter>();
             if (!meshFilter)
@@ -32,10 +31,21 @@ public class WireframeBVHDisplay : MonoBehaviour
             // create AABB for each unique mesh
             uint aabbRootIndex = uint.MaxValue;
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
-            if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
-            {
+            if (!meshInstanceToAABB.ContainsKey(meshInstanceId)){
+                
+                // add vertex data
+                uint vertexStartIndex = (uint) vertices.Count;
+                for (int i = 0; i < meshFilter.mesh.vertices.Length; i++)
+                {
+                    Vertex v;
+                    v.position = meshFilter.mesh.vertices[i];
+                    v.normal = meshFilter.mesh.normals[i];
+                    v.albedoUV = meshFilter.mesh.uv[i];
+                    vertices.Add(v);
+                }
+
                 aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles, 
-                    ref vertices);
+                    ref vertices, vertexStartIndex);
 
                 // we are only creating one AABB per mesh atm so aabb is root
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);
@@ -61,12 +71,6 @@ public class WireframeBVHDisplay : MonoBehaviour
             worldRep.transform.position = b.center; 
             worldRep.GetComponent<MeshRenderer>().material = TempMat;
         }        
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
         
     }
 }
