@@ -161,11 +161,12 @@ public class SceneSerializer : MonoBehaviour
 
         // create Gaussian data
         // TODO: There should be a Gaussian script to attach to game objects
-        string gaussianModelPath = "3D/LargeSingleGaussian.ply";
-        BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/" + gaussianModelPath);
+        const string GAUSSIAN_MODEL_PATH = "3D/LargeSingleGaussian.ply";
+        BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/" + GAUSSIAN_MODEL_PATH);
         List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
         foreach (BaseGaussian3D g in gaussiansTmp)
         {
+            Debug.Log(g);
             GameObjectData currGameObj = new GameObjectData();
             currGameObj.normalMatrix = Matrix4x4.identity;
             currGameObj.worldToObject = Matrix4x4.identity;

@@ -230,6 +230,7 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "triangles", triangles);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "vertices", vertices);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "materialDatas", materialDatas);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "gaussians", gaussians);
                 commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "textures", textures);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
