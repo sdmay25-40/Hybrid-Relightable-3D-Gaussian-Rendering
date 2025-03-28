@@ -21,10 +21,9 @@ RWStructuredBuffer<uint> stackBuffer;
 Stack stackInit(uint pathId, uint stackTop){
     Stack s;
     s.size = 1u;
-    s.headIndex = 1u;
+    s.headIndex = 0u;
     s.pathId = pathId;
     stackBuffer[s.headIndex + (s.pathId * STACK_MAX_SIZE)] = stackTop;
-
 
     return s;
 }

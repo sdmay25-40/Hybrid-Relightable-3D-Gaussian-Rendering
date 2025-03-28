@@ -3,19 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-struct StackNode{
-    // Whether or not this stack node is currently on the stack
-    // 0 = false (Not valid), 1 = true (valid)
-    uint valid;
-    // The data this node contains
-    uint data;
-    // The index of the next node in the stack in the backing array. 
-    // If this node is at the bottom if the stack this will be STACK_MAX_SIZE
-    uint nextIndex;
-};
-
 public class GaussianRenderer : MonoBehaviour
 {
+    // Constants
+    private const int STACK_SIZE = 50;
+
+
     // references
     [SerializeField] private Camera cam;
     [SerializeField] private ComputeShader generatePrimaryPaths;
@@ -43,7 +36,6 @@ public class GaussianRenderer : MonoBehaviour
     private Texture2DArray textures;
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer stackBuffer;
-
     private int gameObjectDataCount;
     private ComputeBuffer cameraData;
     private MeshRenderer[] meshRenderers;
@@ -84,7 +76,7 @@ public class GaussianRenderer : MonoBehaviour
         pathsContinueCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsContinueTmpCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
-        stackBuffer = new ComputeBuffer(pathCount * 500, Marshal.SizeOf(typeof(StackNode)));
+        stackBuffer = new ComputeBuffer(pathCount *  STACK_SIZE, sizeof(uint));
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
