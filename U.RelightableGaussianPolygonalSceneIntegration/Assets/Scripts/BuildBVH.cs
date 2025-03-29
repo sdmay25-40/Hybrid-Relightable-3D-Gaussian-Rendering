@@ -58,7 +58,7 @@ public static class BuildBVH
     /// Determine the triangle position, AAAB size, and cost of a split in an AABB 
     /// </summary> 
     private static float DetermineSplit(Vector3 pos, int axis, int[] triangles, int[] includedTriangleIdxs, 
-    MeshFilter mesh, ref List<int> leftBoxTris, ref List<int> rightBoxTris, ref AABB left, ref AABB right,
+        ref List<int> leftBoxTris, ref List<int> rightBoxTris, ref AABB left, ref AABB right,
     List<Vertex> vertices, int vertexStartIndex){
         left.min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         left.max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
@@ -131,7 +131,7 @@ public static class BuildBVH
     /// <source> https://pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies </source>
     /// *The Source was used as a guide to develop but the implthis not a one to 
     /// one implementation.
-    private static void DivideAABB(Vector3[] triangleCentroids, MeshFilter mesh, int[] triangleIdxs, 
+    private static void DivideAABB(Vector3[] triangleCentroids, int[] meshTriangles, int[] triangleIdxs, 
         int divisionNum, ref AABB root, ref List<AABB> aabbList, ref List<Triangle> triangles,
         List<Vertex> vertices, int vertexStartIndex){
 
@@ -152,8 +152,8 @@ public static class BuildBVH
                 AABB right = new AABB();
 
                 // Determine the triangle position, AABB size, and cost of this split
-                float divCost = DetermineSplit(cent, i, mesh.sharedMesh.triangles, triangleIdxs, 
-                    mesh, ref leftTris, ref rightTris, ref left, ref right, vertices, vertexStartIndex);
+                float divCost = DetermineSplit(cent, i, meshTriangles, triangleIdxs, 
+                    ref leftTris, ref rightTris, ref left, ref right, vertices, vertexStartIndex);
 
                 // If this split is the lowest cost update values to match for it 
                 if(divCost < lowestCost){
@@ -173,7 +173,7 @@ public static class BuildBVH
             bestLeft.triangleStartIndex = (uint) triangles.Count;
             for(int i = 0; i < bestLeftTris.Count; i++){
                 AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestLeftTris[i], 
-                    mesh.sharedMesh.triangles);
+                    meshTriangles);
             }
 
             // Add right triangles to list
@@ -181,7 +181,7 @@ public static class BuildBVH
             bestRight.triangleStartIndex = (uint) triangles.Count;
             for(int i = 0; i < bestRightTris.Count; i++){
                 AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestRightTris[i], 
-                    mesh.sharedMesh.triangles);
+                    meshTriangles);
             }
             // Setup root
             root.leftChildIndex = (uint) aabbList.Count;
@@ -195,11 +195,11 @@ public static class BuildBVH
                 bestLeft.triangleCount = 1;
                 bestLeft.triangleStartIndex = (uint) triangles.Count;
                 AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestLeftTris[0], 
-                    mesh.sharedMesh.triangles);
+                    meshTriangles);
             }
             else{
                 bestLeft.triangleCount = uint.MaxValue;
-                DivideAABB(triangleCentroids, mesh, bestLeftTris.ToArray(), divisionNum + 1,
+                DivideAABB(triangleCentroids, meshTriangles, bestLeftTris.ToArray(), divisionNum + 1,
                     ref bestLeft, ref aabbList, ref triangles, vertices, vertexStartIndex);
             }
 
@@ -208,11 +208,11 @@ public static class BuildBVH
                 bestRight.triangleCount = 1;
                 bestRight.triangleStartIndex = (uint) triangles.Count;
                 AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestRightTris[0], 
-                    mesh.sharedMesh.triangles);
+                    meshTriangles);
             }
             else{
                 bestRight.triangleCount = uint.MaxValue;
-                DivideAABB(triangleCentroids, mesh, bestRightTris.ToArray(), divisionNum + 1,
+                DivideAABB(triangleCentroids, meshTriangles, bestRightTris.ToArray(), divisionNum + 1,
                     ref bestRight, ref aabbList, ref triangles, vertices, vertexStartIndex);
             }
 
@@ -225,21 +225,21 @@ public static class BuildBVH
     }
 
 
-    public static uint BuildBVHForMesh(MeshFilter mesh, ref List<AABB> aabbList, ref List<Triangle> triangles, 
-        ref List<Vertex> vertices, uint vertexStartIndex){
+    public static uint BuildBVHForMesh(int[] meshTriangles, ref List<AABB> aabbList, 
+        ref List<Triangle> triangles, ref List<Vertex> vertices, uint vertexStartIndex){
         
         // Get all centroids of triangles in this mesh and set min and max
-        int[] tris = new int[mesh.sharedMesh.triangles.Length / 3];
-        Vector3[] triangleCentroids = new Vector3[mesh.sharedMesh.triangles.Length / 3];
+        int[] tris = new int[meshTriangles.Length / 3];
+        Vector3[] triangleCentroids = new Vector3[meshTriangles.Length / 3];
         
         AABB root = new AABB();
         root.min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         root.max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
-        for (int i =0; i < mesh.sharedMesh.triangles.Length; i+=3){
-            int vert0Idx = mesh.sharedMesh.triangles[i];
-            int vert1Idx = mesh.sharedMesh.triangles[i + 1];
-            int vert2Idx = mesh.sharedMesh.triangles[i + 2];
+        for (int i =0; i < meshTriangles.Length; i+=3){
+            int vert0Idx = meshTriangles[i];
+            int vert1Idx = meshTriangles[i + 1];
+            int vert2Idx = meshTriangles[i + 2];
 
             Vector3 vert0 = vertices[vert0Idx + (int) vertexStartIndex].position;
             Vector3 vert1 = vertices[vert1Idx + (int) vertexStartIndex].position;
@@ -258,7 +258,7 @@ public static class BuildBVH
 
         // Divide mesh
         root.triangleCount = uint.MaxValue;  
-        DivideAABB(triangleCentroids, mesh, tris, 1, ref root, ref aabbList, ref triangles, 
+        DivideAABB(triangleCentroids, meshTriangles, tris, 1, ref root, ref aabbList, ref triangles, 
             vertices, (int) vertexStartIndex); 
         aabbList.Add(root);
 

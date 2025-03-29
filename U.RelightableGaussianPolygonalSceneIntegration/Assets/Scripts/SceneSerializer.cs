@@ -56,8 +56,8 @@ public class SceneSerializer : MonoBehaviour
                     vertices.Add(v);
                 }
 
-                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter, ref aabbs, ref triangles, ref vertices,
-                    vertexStartIndex);
+                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter.sharedMesh.triangles, 
+                    ref aabbs, ref triangles, ref vertices, vertexStartIndex);
 
                 // we are only creating one AABB per mesh atm so aabb is root
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);

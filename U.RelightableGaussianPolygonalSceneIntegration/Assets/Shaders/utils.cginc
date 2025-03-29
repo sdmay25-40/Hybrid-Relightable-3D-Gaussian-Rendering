@@ -99,22 +99,22 @@ float3x3 quatToRotMatrix(float4 q)
 
 /// <source> https://gamedev.stackexchange.com/a/18459 </source>
 ///<summary> Check if a ray intersects a bounding box.  </summary>
-bool rayAABBIntersect(PathPayload path, AABB b){
+bool rayAABBIntersect(float3 pathOrigin, float4 pathDir, AABB b){
 
     // TODO: Confirm this is the best (most efficient) AABB intersection method
     float3 dirfrac;
     // r.dir is unit direction vector of ray
-    dirfrac.x = 1.0f / path.direction.x;
-    dirfrac.y = 1.0f / path.direction.y;
-    dirfrac.z = 1.0f / path.direction.z;
+    dirfrac.x = 1.0f / pathDir.x;
+    dirfrac.y = 1.0f / pathDir.y;
+    dirfrac.z = 1.0f / pathDir.z;
 
     // Calculate t values
-    float t1 = (b.min.x - path.origin.x) * dirfrac.x;
-    float t2 = (b.max.x - path.origin.x) * dirfrac.x;
-    float t3 = (b.min.y - path.origin.y) * dirfrac.y;
-    float t4 = (b.max.y - path.origin.y) * dirfrac.y;
-    float t5 = (b.min.z - path.origin.z) * dirfrac.z;
-    float t6 = (b.max.z - path.origin.z) * dirfrac.z;
+    float t1 = (b.min.x - pathOrigin.x) * dirfrac.x;
+    float t2 = (b.max.x - pathOrigin.x) * dirfrac.x;
+    float t3 = (b.min.y - pathOrigin.y) * dirfrac.y;
+    float t4 = (b.max.y - pathOrigin.y) * dirfrac.y;
+    float t5 = (b.min.z - pathOrigin.z) * dirfrac.z;
+    float t6 = (b.max.z - pathOrigin.z) * dirfrac.z;
 
     // Build t min and max
     float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
