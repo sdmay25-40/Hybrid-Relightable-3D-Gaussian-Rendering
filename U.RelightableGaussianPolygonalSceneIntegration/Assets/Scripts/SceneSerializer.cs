@@ -166,7 +166,6 @@ public class SceneSerializer : MonoBehaviour
         List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
         foreach (BaseGaussian3D g in gaussiansTmp)
         {
-            Debug.Log(g);
             GameObjectData currGameObj = new GameObjectData();
             currGameObj.normalMatrix = Matrix4x4.identity;
             currGameObj.worldToObject = Matrix4x4.identity;

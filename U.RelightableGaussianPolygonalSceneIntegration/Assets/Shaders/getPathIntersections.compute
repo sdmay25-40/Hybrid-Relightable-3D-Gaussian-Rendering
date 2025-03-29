@@ -25,6 +25,8 @@ float opacityAtPoint(float3 pos, Gaussian gauss){
     return pow(EULER_NUM, exponent);
 }
 
+// TODO: insertion sort
+
 [numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
@@ -39,8 +41,16 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     PathHitRecord closestHit = pathHitRecords[pathId];
     closestHit.t = FLT_MAX;
 
+    PathHitRecord cumulatedHits[MAX_HIT];
+    int hitCount = 0;
+
     for (int i = 0; i < gameObjectDataCount; i++)
     {
+        if (hitCount >= MAX_HIT)
+        {
+            break;
+        }
+
         GameObjectData currGameObj = gameObjectDatas[i];
         float3 pathOriginObjSpace = mul(currGameObj.worldToObject, float4(path.origin,1)).xyz;
         float3 pathDirObjSpace = mul(currGameObj.worldToObject, path.direction).xyz;
@@ -84,6 +94,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
                 if (t < closestHit.t && t > 0)
                 {
+                    // TODO: insertion sort. maybe need to ignore the t or whatever
+
                     closestHit.t = t;
 
                     MaterialData mat = materialDatas[currGameObj.materialIndex];
@@ -137,10 +149,23 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                     closestHit.t = t;
                     closestHit.materialType = MATERIAL_EMISSIVE;
                     closestHit.albedo = gauss.color * opacity;
+                    // TODO: calc normal direction for intersection
+                    // TODO: insert sort
                 }
             }
         }
     }
+
+    // TODO:
+    // FOR i = 0 TO hitCount:
+    //  PathHitRecord hit = hitBuffer[i]
+    //  vec3 accumulatedColor += hit.color * hit.alpha
+    //  accumulatedTransmittance *= (1.0 - hit.alpha)
+    //  also do weighted sum of normals.
+    //  if one of the materials is emissive then set it to emissive for now
+    //  still count it as a hit even if accumulatedTransmittance doesn't reach zero
+
+    // TODO: unrelated but after this is working then make sure you have a Gaussian script you can attach to objects and transform
    
     if (closestHit.t < FLT_MAX)
     {

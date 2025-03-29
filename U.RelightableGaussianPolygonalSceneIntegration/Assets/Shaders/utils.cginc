@@ -2,13 +2,12 @@
 #define EPSILON 1e-6
 #define PI 3.14159265359
 #define EULER_NUM 2.71828
-
 #define PRIM_TYPE_TRIANGLE 0
 #define PRIM_TYPE_GAUSSIAN 1
-
 #define MATERIAL_DIFFUSE 0
 #define MATERIAL_EMISSIVE 1
 #define MATERIAL_TEXTURED 2
+#define MAX_HIT 20
 
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays

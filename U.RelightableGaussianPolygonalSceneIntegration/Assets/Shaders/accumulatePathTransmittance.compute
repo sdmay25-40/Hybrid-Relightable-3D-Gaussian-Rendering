@@ -29,8 +29,6 @@ float opacityAtPoint(float3 pos, Gaussian gauss){
     return g;
 }
 
-
-
 [numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
