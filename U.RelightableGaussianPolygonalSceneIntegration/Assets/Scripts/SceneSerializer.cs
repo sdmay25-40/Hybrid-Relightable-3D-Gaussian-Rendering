@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
+
 public class SceneSerializer : MonoBehaviour
 {
     public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref Texture2DArray texture2DArray)
@@ -43,13 +44,8 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
-                Mesh mesh = meshFilter.sharedMesh;
-
-                // we are only creating one AABB per mesh atm so aabb is root
-                aabbRootIndex = (uint)aabbs.Count; 
-                meshInstanceToAABB.Add(meshInstanceId, aabbs.Count);
-
-                // add vertex data
+                 Mesh mesh = meshFilter.sharedMesh;
+                 // add vertex data
                 uint vertexStartIndex = (uint) vertices.Count;
                 for (int i = 0; i < mesh.vertices.Length; i++)
                 {
@@ -60,39 +56,11 @@ public class SceneSerializer : MonoBehaviour
                     vertices.Add(v);
                 }
 
-                int[] meshTriangles = mesh.triangles;
+                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter.sharedMesh.triangles, 
+                    ref aabbs, ref triangles, ref vertices, vertexStartIndex);
 
-                AABB aabb = new AABB();
-                aabb.triangleStartIndex = (uint) triangles.Count;
-                aabb.triangleCount = (uint) meshTriangles.Length / 3;
-
-                Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-                Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-
-                for (int i = 0; i < meshTriangles.Length; i+=3)
-                {
-                    Triangle t = new Triangle
-                    {
-                        v0 = (uint) meshTriangles[i] + vertexStartIndex,
-                        v1 = (uint) meshTriangles[i+1] + vertexStartIndex,
-                        v2 = (uint) meshTriangles[i+2] + vertexStartIndex
-                    };
-                    triangles.Add(t);
-
-                    min = Vector3.Min(min, vertices[(int)t.v0].position);
-                    min = Vector3.Min(min, vertices[(int)t.v1].position);
-                    min = Vector3.Min(min, vertices[(int)t.v2].position);
-                    max = Vector3.Max(max, vertices[(int)t.v0].position);
-                    max = Vector3.Max(max, vertices[(int)t.v1].position);
-                    max = Vector3.Max(max, vertices[(int)t.v2].position);
-                }
-
-                aabb.min = min;
-                aabb.max = max;
-                aabb.leftChildIndex = uint.MaxValue;
-                aabb.rightChildIndex = uint.MaxValue;
-
-                aabbs.Add(aabb);
+                // we are only creating one AABB per mesh atm so aabb is root
+                meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);
             }
             else
             {

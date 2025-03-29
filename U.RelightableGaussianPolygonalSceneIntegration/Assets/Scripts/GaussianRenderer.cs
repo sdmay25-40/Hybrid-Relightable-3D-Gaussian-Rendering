@@ -5,6 +5,10 @@ using UnityEngine.Rendering;
 
 public class GaussianRenderer : MonoBehaviour
 {
+    // Constants
+    private const int STACK_SIZE = 50;
+
+
     // references
     [SerializeField] private Camera cam;
     [SerializeField] private ComputeShader generatePrimaryPaths;
@@ -31,6 +35,8 @@ public class GaussianRenderer : MonoBehaviour
     private ComputeBuffer vertices;
     private Texture2DArray textures;
     private ComputeBuffer gameObjectDatas;
+    private ComputeBuffer stackBuffer;
+    private int gameObjectDataCount;
     private ComputeBuffer cameraData;
     private MeshRenderer[] meshRenderers;
     private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
@@ -39,7 +45,7 @@ public class GaussianRenderer : MonoBehaviour
     {
         // disable camera's rendering
         if (cam == null)
-        {
+        { 
             Debug.LogError("'GaussianRender': 'cam' reference not set to an instance of a 'Camera'.");
         }
         cam.clearFlags = CameraClearFlags.Nothing;
@@ -70,12 +76,14 @@ public class GaussianRenderer : MonoBehaviour
         pathsContinueCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsContinueTmpCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
+        stackBuffer = new ComputeBuffer(pathCount *  STACK_SIZE, sizeof(uint));
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
         SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref textures);
         BuildCommandBuffer();
+
     }
 
     private void Update()
@@ -89,9 +97,9 @@ public class GaussianRenderer : MonoBehaviour
 
     private void OnDestroy()
     {
-        cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, commandBuffer);
         if (commandBuffer != null)
         {
+            cam.RemoveCommandBuffer(CameraEvent.AfterEverything, commandBuffer);
             commandBuffer.Release();
             commandBuffer = null;
         }
@@ -165,6 +173,10 @@ public class GaussianRenderer : MonoBehaviour
             triangles.Release();
             triangles = null;
         }
+        if(stackBuffer != null){
+            stackBuffer.Release();
+            stackBuffer = null;
+        }
         if (vertices != null)
         {
             vertices.Release();
@@ -226,6 +238,8 @@ public class GaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "textures", textures);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
+                commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "stackBuffer", stackBuffer);
+
                 commandBuffer.DispatchCompute(getPathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
 
