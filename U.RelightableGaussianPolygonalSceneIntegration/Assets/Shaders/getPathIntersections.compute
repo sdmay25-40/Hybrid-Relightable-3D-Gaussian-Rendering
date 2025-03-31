@@ -15,6 +15,7 @@ Texture2DArray<float4> textures;
 SamplerState samplertextures;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
+RWStructuredBuffer<PathHitRecord> sortedHitsBuffer;
 
 // TODO: Is this equivalent to the opacity function?
 /// <source> Sect. 3.1, Eq. 1 https://arxiv.org/pdf/2311.16043#page.4 </source>
@@ -25,7 +26,46 @@ float opacityAtPoint(float3 pos, Gaussian gauss){
     return pow(EULER_NUM, exponent);
 }
 
-// TODO: insertion sort
+void insertionSortAndCull(uint idX, inout uint hitCount, PathHitRecord newHit)
+{
+    if (hitCount >= MAX_HIT)
+    {
+        return;
+    }
+
+    // insert new hit
+    uint insertIdx;
+    for (insertIdx = hitCount; insertIdx > 0; insertIdx--)
+    {
+        // storing PathHitRecord increase fps by 10 frames
+        PathHitRecord prevHit = sortedHitsBuffer[insertIdx-1 + (idX * MAX_HIT)];
+        if (prevHit.t <= newHit.t)
+        {
+            break;
+        }
+        sortedHitsBuffer[insertIdx + (idX * MAX_HIT)] = prevHit;
+    }
+
+    sortedHitsBuffer[insertIdx + (idX * MAX_HIT)] = newHit;
+    hitCount++;
+
+    if (hitCount == 1)
+    {
+        return;
+    }
+
+    // cull hits past max opacity
+    float transmittance = 1.0;
+    for (uint cullIdx = 0; cullIdx < hitCount; cullIdx++)
+    {
+        transmittance *= (1.0 - sortedHitsBuffer[cullIdx + (idX * MAX_HIT)].albedo.w);
+        if (transmittance <= 0.001)
+        {
+            hitCount = cullIdx + 1;
+            return;
+        }
+    }
+}
 
 [numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -38,11 +78,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     uint pathId = pathsContinueCounter[id.x];
     PathPayload path = paths[pathId];
 
-    PathHitRecord closestHit = pathHitRecords[pathId];
-    closestHit.t = FLT_MAX;
-
-    PathHitRecord cumulatedHits[MAX_HIT];
-    int hitCount = 0;
+    PathHitRecord tmpHit = pathHitRecords[pathId];
+    uint hitCount = 0;
 
     for (int i = 0; i < gameObjectDataCount; i++)
     {
@@ -64,6 +101,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             for (uint j = 0; j < aabb.primitiveCount; j++)
             {
                 Triangle tri = triangles[aabb.primitiveStartIndex + j];
+
                 float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
                 float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
                 float3 p = cross(pathDirObjSpace, aToC);
@@ -91,32 +129,29 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 }
 
                 float t = dot(q, aToC) * invDet;
-
-                if (t < closestHit.t && t > 0)
+                
+                if (t > 0)
                 {
-                    // TODO: insertion sort. maybe need to ignore the t or whatever
-
-                    closestHit.t = t;
+                    tmpHit.t = t;
 
                     MaterialData mat = materialDatas[currGameObj.materialIndex];
-                    closestHit.materialType = mat.type;
+                    tmpHit.materialType = mat.type;
 
                     float w = 1 - u - v;
                     if (mat.type != MATERIAL_TEXTURED)
                     {
-                        closestHit.albedo = mat.albedo;
+                        tmpHit.albedo = mat.albedo;
                     }
                     else
                     {
                         float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
-                        closestHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
+                        tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
                     }
 
-                    // float4 normal = mul(currGameObj.normalMatrix, float4(cross(aToB, aToC), 0));
-                    // normal.w = 0;
-                    // closestHit.normal = normalize(normal);
                     float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
-                    closestHit.normal = normalize(normal.xyz);
+                    tmpHit.normal = normalize(normal.xyz);
+
+                    insertionSortAndCull(id.x, hitCount, tmpHit);
                 }
             }
         }
@@ -124,8 +159,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         {
             // ray-Gaussian intersection
 
-            // src: Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
-            // maximum gaussian contribution
+            // maximum gaussian contribution Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
             Gaussian gauss = gaussians[aabb.primitiveStartIndex];
 
             float4 covTimesPathDir = mul(gauss.cov, path.direction);
@@ -138,38 +172,48 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             float t = numerator / denominator;
 
-            if (t < closestHit.t && t > 0)
+            if (t > 0)
             {
                 // rx is the point where this Gaussian has maximum influence on this Gaussian
                 float3 rx = path.origin + (t * path.direction.xyz);
-                float opacity = opacityAtPoint(rx, gauss);
-                
-                if(opacity > 0.01)
-                {
-                    closestHit.t = t;
-                    closestHit.materialType = MATERIAL_EMISSIVE;
-                    closestHit.albedo = gauss.color * opacity;
-                    // TODO: calc normal direction for intersection
-                    // TODO: insert sort
-                }
+                gauss.color.w = opacityAtPoint(rx, gauss);
+               
+                tmpHit.t = t;
+                tmpHit.materialType = MATERIAL_EMISSIVE;
+                tmpHit.albedo = gauss.color;
+                tmpHit.normal = normalize(rx - gauss.pos);
+
+                insertionSortAndCull(id.x, hitCount, tmpHit);
             }
         }
     }
 
-    // TODO:
-    // FOR i = 0 TO hitCount:
-    //  PathHitRecord hit = hitBuffer[i]
-    //  vec3 accumulatedColor += hit.color * hit.alpha
-    //  accumulatedTransmittance *= (1.0 - hit.alpha)
-    //  also do weighted sum of normals.
-    //  if one of the materials is emissive then set it to emissive for now
-    //  still count it as a hit even if accumulatedTransmittance doesn't reach zero
+    // TODO: add Gaussian script you can attach to objects and transform
 
-    // TODO: unrelated but after this is working then make sure you have a Gaussian script you can attach to objects and transform
+    // TODO: merge main into branch
    
-    if (closestHit.t < FLT_MAX)
+    if (hitCount > 0)
     {
-        pathHitRecords[pathId] = closestHit;
+        PathHitRecord lastHit = sortedHitsBuffer[hitCount-1 + (id.x * MAX_HIT)];
+        tmpHit.t = lastHit.t;
+        tmpHit.materialType = MATERIAL_DIFFUSE;
+        tmpHit.albedo = float4(0,0,0,0);
+        tmpHit.normal = lastHit.normal;
+
+        float accumulatedTransmittance = 1.0;
+        for (uint hitIdx = 0; hitIdx < hitCount; hitIdx++)
+        {
+            PathHitRecord currHit = sortedHitsBuffer[hitIdx + (id.x * MAX_HIT)];
+            if (currHit.materialType == MATERIAL_EMISSIVE)
+            {
+                tmpHit.materialType = MATERIAL_EMISSIVE;
+            }
+
+            tmpHit.albedo += (currHit.albedo * currHit.albedo.w) * accumulatedTransmittance;
+            accumulatedTransmittance *= (1 - currHit.albedo.w);
+        }
+
+        pathHitRecords[pathId] = tmpHit;
 
         uint prevIndex = pathsContinueTmpCounter.IncrementCounter();
         pathsContinueTmpCounter[prevIndex] = pathId;
