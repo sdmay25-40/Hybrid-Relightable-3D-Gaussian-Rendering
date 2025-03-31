@@ -7,7 +7,7 @@ public class GaussianRenderer : MonoBehaviour
 {
     // Constants
     private const int STACK_SIZE = 50;
-
+    private const int MAX_HIT = 10;
 
     // references
     [SerializeField] private Camera cam;
@@ -79,8 +79,6 @@ public class GaussianRenderer : MonoBehaviour
         pathsContinueTmpCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
         pathsContinueTmpCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         stackBuffer = new ComputeBuffer(pathCount *  STACK_SIZE, sizeof(uint));
-
-        const int MAX_HIT = 10;
         sortedHitsBuffer = new ComputeBuffer(pathCount * MAX_HIT, Marshal.SizeOf(typeof(PathHitRecord)));
 
         SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref textures);

@@ -8,6 +8,7 @@
 #define MATERIAL_DIFFUSE 0
 #define MATERIAL_EMISSIVE 1
 #define MATERIAL_TEXTURED 2
+#define STACK_MAX_SIZE 50
 #define MAX_HIT 10
 
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
@@ -129,16 +130,15 @@ float3x3 quatToRotMatrix(float4 q)
 
 /// <source> https://gamedev.stackexchange.com/a/18459 </source>
 ///<summary> Check if a ray intersects a bounding box.  </summary>
-bool rayAABBIntersect(float3 pathOrigin, float4 pathDir, AABB b){
-
+bool rayAABBIntersect(float3 pathOrigin, float3 pathDir, AABB b)
+{
     // TODO: Confirm this is the best (most efficient) AABB intersection method
     float3 dirfrac;
-    // r.dir is unit direction vector of ray
     dirfrac.x = 1.0f / pathDir.x;
     dirfrac.y = 1.0f / pathDir.y;
     dirfrac.z = 1.0f / pathDir.z;
 
-    // Calculate t values
+    // calculate t values
     float t1 = (b.min.x - pathOrigin.x) * dirfrac.x;
     float t2 = (b.max.x - pathOrigin.x) * dirfrac.x;
     float t3 = (b.min.y - pathOrigin.y) * dirfrac.y;
@@ -146,11 +146,11 @@ bool rayAABBIntersect(float3 pathOrigin, float4 pathDir, AABB b){
     float t5 = (b.min.z - pathOrigin.z) * dirfrac.z;
     float t6 = (b.max.z - pathOrigin.z) * dirfrac.z;
 
-    // Build t min and max
+    // build t min and max
     float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
     float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
 
-    // Miss
+    // miss
     if (tmax < 0)
     {
         return false;
@@ -163,7 +163,6 @@ bool rayAABBIntersect(float3 pathOrigin, float4 pathDir, AABB b){
 
     return true;
 }
-
 
 /// <summary>
 /// Generates a unique seed for each frame and bounce iteration. Seed values above 500,000 generate visual

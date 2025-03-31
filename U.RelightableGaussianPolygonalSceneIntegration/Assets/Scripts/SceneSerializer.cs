@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-
 public class SceneSerializer : MonoBehaviour
 {
     public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray texture2DArray)
@@ -46,6 +45,7 @@ public class SceneSerializer : MonoBehaviour
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
                 Mesh mesh = meshFilter.sharedMesh;
+
                 // add vertex data
                 uint vertexStartIndex = (uint) vertices.Count;
                 for (int i = 0; i < mesh.vertices.Length; i++)

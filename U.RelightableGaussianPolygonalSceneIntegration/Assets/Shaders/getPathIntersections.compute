@@ -1,8 +1,6 @@
 #pragma kernel CSMain
 #include "utils.cginc"
 
-#define STACK_MAX_SIZE 50
-
 StructuredBuffer<PathPayload> paths;
 StructuredBuffer<uint> pathsContinueCounter;
 StructuredBuffer<uint> pathsContinueCounterValue;
@@ -136,10 +134,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             uint currAABBIndex = stackPop(stackSize, id.x);
             AABB aabb = aabbs[currAABBIndex];
 
-            if (rayAABBIntersect(pathOriginObjSpace, float4(pathDirObjSpace, 1), aabb))
+            if (rayAABBIntersect(pathOriginObjSpace, pathDirObjSpace, aabb))
             {
                 // leaf node intersection
-                if(aabb.triangleCount < 4294967295U)
+                if(aabb.primitiveCount < 4294967295U)
                 {
                     if (aabb.primitiveType == PRIM_TYPE_TRIANGLE)
                     {
@@ -239,10 +237,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
     }
 
-    // TODO: add Gaussian script you can attach to objects and transform
-
-    // TODO: merge main into branch
-   
     if (hitCount > 0)
     {
         PathHitRecord lastHit = sortedHitsBuffer[hitCount-1 + (id.x * MAX_HIT)];

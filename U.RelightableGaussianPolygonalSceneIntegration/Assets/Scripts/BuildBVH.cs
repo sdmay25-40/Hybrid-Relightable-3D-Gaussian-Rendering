@@ -1,32 +1,28 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 
 public static class BuildBVH 
 {   
-
     private const float COST_TRAV = 1;
     private const float COST_ITRSCT = 2;
     private const float NUM_DIVISIONS = 8;
 
-
     /// <summary>
-    ///  Calculate the total area of an Axis Aligned Bounding Box
+    /// Calculate the total area of an Axis Aligned Bounding Box
     /// </summary>
-    /// 
-    private static float CalcAABBArea(AABB calcAreaOf){
-        return (calcAreaOf.max.x - calcAreaOf.min.x) * (calcAreaOf.max.y - calcAreaOf.min.y) 
-            * (calcAreaOf.max.z - calcAreaOf.min.z);
+    private static float calcAABBArea(AABB calcAreaOf)
+    {
+        return (calcAreaOf.max.x - calcAreaOf.min.x) * (calcAreaOf.max.y - calcAreaOf.min.y) * (calcAreaOf.max.z - calcAreaOf.min.z);
     }
 
     /// <summary>
     /// Calculate the centroid of a triangle from its 3 vertices
     /// </summary>
-    private static Vector3 CalcTriangleCentroid(Vector3 vert1, Vector3 vert2, Vector3 vert3){
+    private static Vector3 calcTriangleCentroid(Vector3 vert1, Vector3 vert2, Vector3 vert3)
+    {
         float xCent = (vert1.x + vert2.x + vert3.x) / 3.0f;
         float yCent = (vert1.y + vert2.y + vert3.y) / 3.0f;
         float zCent = (vert1.z + vert2.z + vert3.z) / 3.0f;
-
         return  new Vector3(xCent, yCent, zCent);
     }
     
@@ -41,9 +37,9 @@ public static class BuildBVH
     /// <param name="triangleVertexStartIndex">The index of the first vertex for this triangle 
     /// within the mesh's triangles array</param>    
     /// <param name="meshTriangleArray">The triangle's array for the mesh containign the triangle </param>
-    private static void AddTriangleStruct(ref List<Triangle> triangles, List<Vertex> vertices, 
-        int meshVertexStartIndex, int triangleVertexStartIndex, int[] meshTriangleArray){
-        // Make struct and add it to list
+    private static void addTriangleStruct(ref List<Triangle> triangles, int meshVertexStartIndex, int triangleVertexStartIndex, int[] meshTriangleArray)
+    {
+        // make struct and add it to list
         Triangle t = new Triangle(){
             v0 = (uint) (meshTriangleArray[triangleVertexStartIndex] + meshVertexStartIndex),
             v1 = (uint) (meshTriangleArray[triangleVertexStartIndex + 1] + meshVertexStartIndex),
@@ -57,9 +53,8 @@ public static class BuildBVH
     /// <summary>
     /// Determine the triangle position, AAAB size, and cost of a split in an AABB 
     /// </summary> 
-    private static float DetermineSplit(Vector3 pos, int axis, int[] triangles, int[] includedTriangleIdxs, 
-        ref List<int> leftBoxTris, ref List<int> rightBoxTris, ref AABB left, ref AABB right,
-    List<Vertex> vertices, int vertexStartIndex){
+    private static float DetermineSplit(Vector3 pos, int axis, int[] triangles, int[] includedTriangleIdxs, ref List<int> leftBoxTris, ref List<int> rightBoxTris, ref AABB left, ref AABB right, List<Vertex> vertices, int vertexStartIndex)
+    {
         left.min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         left.max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
@@ -72,7 +67,7 @@ public static class BuildBVH
             Vector3 vert1 = vertices[triangles[tri + 1] + vertexStartIndex].position;
             Vector3 vert2 = vertices[triangles[tri + 2] + vertexStartIndex].position;
 
-            Vector3 centroid = CalcTriangleCentroid(vert0, vert1, vert2);
+            Vector3 centroid = calcTriangleCentroid(vert0, vert1, vert2);
 
             bool onLeft = false;
 
@@ -94,7 +89,6 @@ public static class BuildBVH
                     onLeft = true;
                 }
             }
-            
 
             // Add triangle to proper side
             if(onLeft){
@@ -122,8 +116,8 @@ public static class BuildBVH
 
         // Caculate the cost of this division 
         float cost = COST_TRAV + 
-            (CalcAABBArea(left) * (COST_ITRSCT * leftBoxTris.Count)) +
-            (CalcAABBArea(right) * (COST_ITRSCT * rightBoxTris.Count));
+            (calcAABBArea(left) * (COST_ITRSCT * leftBoxTris.Count)) +
+            (calcAABBArea(right) * (COST_ITRSCT * rightBoxTris.Count));
             
         return cost;
     }
@@ -131,32 +125,34 @@ public static class BuildBVH
     /// <source> https://pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies </source>
     /// *The Source was used as a guide to develop but the implthis not a one to 
     /// one implementation.
-    private static void DivideAABB(Vector3[] triangleCentroids, int[] meshTriangles, int[] triangleIdxs, 
-        int divisionNum, ref AABB root, ref List<AABB> aabbList, ref List<Triangle> triangles,
-        List<Vertex> vertices, int vertexStartIndex){
-
-        // Evaluate all possible splits (All three axis for every centroid)
+    private static void DivideAABB(Vector3[] triangleCentroids, int[] meshTriangles, int[] triangleIdxs, int divisionNum, ref AABB root, ref List<AABB> aabbList, ref List<Triangle> triangles, List<Vertex> vertices, int vertexStartIndex){
+        // evaluate all possible splits (all three axis for every centroid)
         float lowestCost = float.MaxValue;
         List<int> bestLeftTris = new List<int>();
         List<int> bestRightTris = new List<int>();
         AABB bestLeft = new AABB();
         AABB bestRight = new AABB();
-
+        bestLeft.primitiveType = PrimType.Triangle;
+        bestRight.primitiveType = PrimType.Triangle;
     
-        for(int i = 0; i < 3; i++){
-            foreach(int triIdx in triangleIdxs){
+        for(int i = 0; i < 3; i++)
+        {
+            foreach(int triIdx in triangleIdxs)
+            {
                 Vector3 cent = triangleCentroids[triIdx / 3];
                 List<int> leftTris = new List<int>();
                 List<int> rightTris = new List<int>();
                 AABB left = new AABB();
                 AABB right = new AABB();
+                left.primitiveType = PrimType.Triangle;
+                right.primitiveType = PrimType.Triangle;
 
-                // Determine the triangle position, AABB size, and cost of this split
-                float divCost = DetermineSplit(cent, i, meshTriangles, triangleIdxs, 
-                    ref leftTris, ref rightTris, ref left, ref right, vertices, vertexStartIndex);
+                // determine the triangle position, AABB size, and cost of this split
+                float divCost = DetermineSplit(cent, i, meshTriangles, triangleIdxs, ref leftTris, ref rightTris, ref left, ref right, vertices, vertexStartIndex);
 
-                // If this split is the lowest cost update values to match for it 
-                if(divCost < lowestCost){
+                // if this split is the lowest cost update values to match for it 
+                if (divCost < lowestCost)
+                {
                     lowestCost = divCost;
                     bestLeftTris = leftTris;
                     bestRightTris = rightTris;
@@ -166,57 +162,59 @@ public static class BuildBVH
             }
         }
 
-        // Setup leaf nodes or subdivide further
-        if(divisionNum == NUM_DIVISIONS){
-            // Add left triangles to list (if there are any)
-            bestLeft.triangleCount = (uint) bestLeftTris.Count;
-            bestLeft.triangleStartIndex = (uint) triangles.Count;
-            for(int i = 0; i < bestLeftTris.Count; i++){
-                AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestLeftTris[i], 
-                    meshTriangles);
+        // setup leaf nodes or subdivide further
+        if (divisionNum == NUM_DIVISIONS)
+        {
+            // add left triangles to list (if there are any)
+            bestLeft.primitiveCount = (uint) bestLeftTris.Count;
+            bestLeft.primitiveStartIndex = (uint) triangles.Count;
+            for(int i = 0; i < bestLeftTris.Count; i++)
+            {
+                addTriangleStruct(ref triangles, vertexStartIndex, bestLeftTris[i], meshTriangles);
             }
 
-            // Add right triangles to list
-            bestRight.triangleCount = (uint) bestRightTris.Count;
-            bestRight.triangleStartIndex = (uint) triangles.Count;
-            for(int i = 0; i < bestRightTris.Count; i++){
-                AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestRightTris[i], 
-                    meshTriangles);
+            // add right triangles to list
+            bestRight.primitiveCount = (uint) bestRightTris.Count;
+            bestRight.primitiveStartIndex = (uint) triangles.Count;
+            for(int i = 0; i < bestRightTris.Count; i++)
+            {
+                addTriangleStruct(ref triangles, vertexStartIndex, bestRightTris[i], meshTriangles);
             }
-            // Setup root
+
+            // setup root
             root.leftChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestLeft);
             root.rightChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestRight);
         }
-        else{
-            // Subdivide left and right (or make them leaf nodes if they have only one triangle)
-            if(bestLeftTris.Count == 1){
-                bestLeft.triangleCount = 1;
-                bestLeft.triangleStartIndex = (uint) triangles.Count;
-                AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestLeftTris[0], 
-                    meshTriangles);
+        else
+        {
+            // subdivide left and right (or make them leaf nodes if they have only one triangle)
+            if(bestLeftTris.Count == 1)
+            {
+                bestLeft.primitiveCount = 1;
+                bestLeft.primitiveStartIndex = (uint) triangles.Count;
+                addTriangleStruct(ref triangles, vertexStartIndex, bestLeftTris[0], meshTriangles);
             }
-            else{
-                bestLeft.triangleCount = uint.MaxValue;
-                DivideAABB(triangleCentroids, meshTriangles, bestLeftTris.ToArray(), divisionNum + 1,
-                    ref bestLeft, ref aabbList, ref triangles, vertices, vertexStartIndex);
-            }
-
-
-            if(bestRightTris.Count == 1){
-                bestRight.triangleCount = 1;
-                bestRight.triangleStartIndex = (uint) triangles.Count;
-                AddTriangleStruct(ref triangles, vertices, vertexStartIndex, bestRightTris[0], 
-                    meshTriangles);
-            }
-            else{
-                bestRight.triangleCount = uint.MaxValue;
-                DivideAABB(triangleCentroids, meshTriangles, bestRightTris.ToArray(), divisionNum + 1,
-                    ref bestRight, ref aabbList, ref triangles, vertices, vertexStartIndex);
+            else
+            {
+                bestLeft.primitiveCount = uint.MaxValue;
+                DivideAABB(triangleCentroids, meshTriangles, bestLeftTris.ToArray(), divisionNum + 1, ref bestLeft, ref aabbList, ref triangles, vertices, vertexStartIndex);
             }
 
-            // Setup root
+            if (bestRightTris.Count == 1)
+            {
+                bestRight.primitiveCount = 1;
+                bestRight.primitiveStartIndex = (uint) triangles.Count;
+                addTriangleStruct(ref triangles, vertexStartIndex, bestRightTris[0], meshTriangles);
+            }
+            else
+            {
+                bestRight.primitiveCount = uint.MaxValue;
+                DivideAABB(triangleCentroids, meshTriangles, bestRightTris.ToArray(), divisionNum + 1, ref bestRight, ref aabbList, ref triangles, vertices, vertexStartIndex);
+            }
+
+            // setup root
             root.leftChildIndex = (uint) aabbList.Count;
             aabbList.Add(bestLeft);
             root.rightChildIndex = (uint) aabbList.Count;
@@ -224,19 +222,19 @@ public static class BuildBVH
         }
     }
 
-
-    public static uint BuildBVHForMesh(int[] meshTriangles, ref List<AABB> aabbList, 
-        ref List<Triangle> triangles, ref List<Vertex> vertices, uint vertexStartIndex){
-        
-        // Get all centroids of triangles in this mesh and set min and max
+    public static uint BuildBVHForMesh(int[] meshTriangles, ref List<AABB> aabbList, ref List<Triangle> triangles, ref List<Vertex> vertices, uint vertexStartIndex)
+    {
+        // get all centroids of triangles in this mesh and set min and max
         int[] tris = new int[meshTriangles.Length / 3];
         Vector3[] triangleCentroids = new Vector3[meshTriangles.Length / 3];
         
         AABB root = new AABB();
+        root.primitiveType = PrimType.Triangle;
         root.min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         root.max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
-        for (int i =0; i < meshTriangles.Length; i+=3){
+        for (int i =0; i < meshTriangles.Length; i+=3)
+        {
             int vert0Idx = meshTriangles[i];
             int vert1Idx = meshTriangles[i + 1];
             int vert2Idx = meshTriangles[i + 2];
@@ -252,17 +250,15 @@ public static class BuildBVH
             root.max = Vector3.Max(root.max, vert1);
             root.max = Vector3.Max(root.max, vert2);
 
-            triangleCentroids[i / 3] = CalcTriangleCentroid(vert0, vert1, vert2);
+            triangleCentroids[i / 3] = calcTriangleCentroid(vert0, vert1, vert2);
             tris[i / 3] = i; 
         }
 
-        // Divide mesh
-        root.triangleCount = uint.MaxValue;  
-        DivideAABB(triangleCentroids, meshTriangles, tris, 1, ref root, ref aabbList, ref triangles, 
-            vertices, (int) vertexStartIndex); 
+        // divide mesh
+        root.primitiveCount = uint.MaxValue;  
+        DivideAABB(triangleCentroids, meshTriangles, tris, 1, ref root, ref aabbList, ref triangles, vertices, (int) vertexStartIndex); 
         aabbList.Add(root);
 
         return (uint) (aabbList.Count - 1);
-
     }
 }
