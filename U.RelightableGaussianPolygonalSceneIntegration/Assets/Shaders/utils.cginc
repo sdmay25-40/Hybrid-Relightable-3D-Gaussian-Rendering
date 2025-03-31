@@ -129,7 +129,7 @@ float3x3 quatToRotMatrix(float4 q)
 }
 
 /// <source> https://gamedev.stackexchange.com/a/18459 </source>
-///<summary> Check if a ray intersects a bounding box.  </summary>
+/// <summary> Check if a ray intersects a bounding box.  </summary>
 bool rayAABBIntersect(float3 pathOrigin, float3 pathDir, AABB b)
 {
     // TODO: Confirm this is the best (most efficient) AABB intersection method

@@ -134,98 +134,98 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             uint currAABBIndex = stackPop(stackSize, id.x);
             AABB aabb = aabbs[currAABBIndex];
 
+            if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
+            {
+                // maximum gaussian contribution Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
+                Gaussian gauss = gaussians[aabb.primitiveStartIndex];
+
+                float4 covTimesPathDir = mul(gauss.cov, path.direction);
+
+                float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - path.origin), 0));
+                float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
+
+                float1x4 pathDirT = transpose((float4x1)path.direction);
+                float denominator = mul(pathDirT, covTimesPathDir);
+
+                float t = numerator / denominator;
+
+                if (t > 0)
+                {
+                    float3 rx = path.origin + (t * path.direction.xyz);
+                    gauss.color.w = opacityAtPoint(rx, gauss);
+                
+                    tmpHit.t = t;
+                    tmpHit.materialType = MATERIAL_EMISSIVE;
+                    tmpHit.albedo = gauss.color;
+                    tmpHit.normal = normalize(rx - gauss.pos);
+
+                    insertionSortAndCull(id.x, hitCount, tmpHit);
+                }
+
+                break;
+            }
+
             if (rayAABBIntersect(pathOriginObjSpace, pathDirObjSpace, aabb))
             {
                 // leaf node intersection
                 if(aabb.primitiveCount < 4294967295U)
                 {
-                    if (aabb.primitiveType == PRIM_TYPE_TRIANGLE)
+                    // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+                    for (uint j = 0; j < aabb.primitiveCount; j++)
                     {
-                        // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-                        for (uint j = 0; j < aabb.primitiveCount; j++)
+                        Triangle tri = triangles[aabb.primitiveStartIndex + j];
+
+                        float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
+                        float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
+                        float3 p = cross(pathDirObjSpace, aToC);
+
+                        float det  = dot(p, aToB);
+                        if (det < EPSILON)
                         {
-                            Triangle tri = triangles[aabb.primitiveStartIndex + j];
-
-                            float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
-                            float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
-                            float3 p = cross(pathDirObjSpace, aToC);
-
-                            float det  = dot(p, aToB);
-                            if (det < EPSILON)
-                            {
-                                continue;
-                            }
-
-                            float invDet = rcp(det);
-
-                            float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
-                            float u = dot(p, aToOrigin) * invDet;
-                            if (u < 0 || u > 1)
-                            {
-                                continue; 
-                            }
-
-                            float3 q = cross(aToOrigin, aToB);
-                            float v = dot(q, pathDirObjSpace) * invDet;
-                            if (v < 0 || u + v > 1)
-                            {
-                                continue;
-                            }
-
-                            float t = dot(q, aToC) * invDet;
-                            
-                            if (t > 0)
-                            {
-                                tmpHit.t = t;
-
-                                MaterialData mat = materialDatas[currGameObj.materialIndex];
-                                tmpHit.materialType = mat.type;
-
-                                float w = 1 - u - v;
-                                if (mat.type != MATERIAL_TEXTURED)
-                                {
-                                    tmpHit.albedo = mat.albedo;
-                                }
-                                else
-                                {
-                                    float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
-                                    tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
-                                }
-
-                                float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
-                                tmpHit.normal = normalize(normal.xyz);
-
-                                insertionSortAndCull(id.x, hitCount, tmpHit);
-                            }
+                            continue;
                         }
-                    }
-                    else
-                    {
-                        // maximum gaussian contribution Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
-                        Gaussian gauss = gaussians[aabb.primitiveStartIndex];
 
-                        float4 covTimesPathDir = mul(gauss.cov, path.direction);
+                        float invDet = rcp(det);
 
-                        float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - path.origin), 0));
-                        float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
+                        float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
+                        float u = dot(p, aToOrigin) * invDet;
+                        if (u < 0 || u > 1)
+                        {
+                            continue; 
+                        }
 
-                        float1x4 pathDirT = transpose((float4x1)path.direction);
-                        float denominator = mul(pathDirT, covTimesPathDir);
+                        float3 q = cross(aToOrigin, aToB);
+                        float v = dot(q, pathDirObjSpace) * invDet;
+                        if (v < 0 || u + v > 1)
+                        {
+                            continue;
+                        }
 
-                        float t = numerator / denominator;
-
+                        float t = dot(q, aToC) * invDet;
+                        
                         if (t > 0)
                         {
-                            float3 rx = path.origin + (t * path.direction.xyz);
-                            gauss.color.w = opacityAtPoint(rx, gauss);
-                        
                             tmpHit.t = t;
-                            tmpHit.materialType = MATERIAL_EMISSIVE;
-                            tmpHit.albedo = gauss.color;
-                            tmpHit.normal = normalize(rx - gauss.pos);
+
+                            MaterialData mat = materialDatas[currGameObj.materialIndex];
+                            tmpHit.materialType = mat.type;
+
+                            float w = 1 - u - v;
+                            if (mat.type != MATERIAL_TEXTURED)
+                            {
+                                tmpHit.albedo = mat.albedo;
+                            }
+                            else
+                            {
+                                float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
+                                tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
+                            }
+
+                            float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
+                            tmpHit.normal = normalize(normal.xyz);
 
                             insertionSortAndCull(id.x, hitCount, tmpHit);
-                        }            
+                        }
                     }
                 }
                 else
