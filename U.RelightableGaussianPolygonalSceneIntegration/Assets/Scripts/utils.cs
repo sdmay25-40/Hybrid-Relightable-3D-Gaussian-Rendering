@@ -81,3 +81,9 @@ public struct Vertex
     public Vector3 normal;
     public Vector2 albedoUV;
 }
+
+public static class Utils
+{
+    public const int STACK_SIZE = 50;
+    public const int MAX_HIT = 10;
+}

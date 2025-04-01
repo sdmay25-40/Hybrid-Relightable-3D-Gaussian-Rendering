@@ -10,6 +10,8 @@
 #define MATERIAL_TEXTURED 2
 #define STACK_MAX_SIZE 50
 #define MAX_HIT 10
+#define MIN_OPACITY 0.01
+#define T_MIN 0.001
 
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays

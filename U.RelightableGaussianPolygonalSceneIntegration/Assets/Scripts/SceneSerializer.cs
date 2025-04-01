@@ -116,19 +116,41 @@ public class SceneSerializer : MonoBehaviour
             gameObjectDatas.Add(currGameObj);
         }
 
-        trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
-        trianglesBuffer.SetData(triangles);
-        verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
-        verticesBuffer.SetData(vertices);
-        materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
-        materialDatasBuffer.SetData(materialDatas);
+        // initialize dummy ComputeBuffer to avoid null reference in forced loop unroll at compile time in insertionSortAndCull()
+        if (triangles.Count > 0)
+        {
+            trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
+            trianglesBuffer.SetData(triangles);
+        }
+        else
+        {
+            trianglesBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+        if (vertices.Count > 0)
+        {
+            verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
+            verticesBuffer.SetData(vertices);
+        }
+        else
+        {
+            verticesBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+        if (materialDatas.Count > 0)
+        {
+            materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
+            materialDatasBuffer.SetData(materialDatas);
+        }
+        else
+        {
+            materialDatasBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
 
         // create Gaussian data
         List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
         GaussianScrpt[] gaussianScrpts = FindObjectsOfType<GaussianScrpt>();
         foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
         {
-            BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.filePath);
+            BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
             foreach (BaseGaussian3D g in gaussiansTmp)
             {
                 GameObjectData currGameObj = new GameObjectData();
@@ -148,13 +170,28 @@ public class SceneSerializer : MonoBehaviour
             }
         }
         
-        gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
-        gaussiansBuffer.SetData(gaussians);
-        gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
-        gameObjectDatasBuffer.SetData(gameObjectDatas);
-        aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
-        aabbsBuffer.SetData(aabbs);
-       
+        if (gaussians.Count > 0)
+        {
+            gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
+            gaussiansBuffer.SetData(gaussians);
+        }
+        else
+        {
+            gaussiansBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+        gameObjectDatasBuffer = null;
+        if (gameObjectDatas.Count > 0)
+        {
+            gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
+            gameObjectDatasBuffer.SetData(gameObjectDatas);
+        }
+        aabbsBuffer = null;
+        if (aabbs.Count > 0)
+        {
+            aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
+            aabbsBuffer.SetData(aabbs);
+        }
+
         // create texture 2D array
         texture2DArray = null;
         if (textures.Count > 0)

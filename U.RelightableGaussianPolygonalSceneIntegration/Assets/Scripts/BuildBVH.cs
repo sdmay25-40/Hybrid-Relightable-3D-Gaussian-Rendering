@@ -10,7 +10,7 @@ public static class BuildBVH
     /// <summary>
     /// Calculate the total area of an Axis Aligned Bounding Box
     /// </summary>
-    private static float calcAABBArea(AABB calcAreaOf)
+    private static float CalcAABBArea(AABB calcAreaOf)
     {
         return (calcAreaOf.max.x - calcAreaOf.min.x) * (calcAreaOf.max.y - calcAreaOf.min.y) * (calcAreaOf.max.z - calcAreaOf.min.z);
     }
@@ -18,7 +18,7 @@ public static class BuildBVH
     /// <summary>
     /// Calculate the centroid of a triangle from its 3 vertices
     /// </summary>
-    private static Vector3 calcTriangleCentroid(Vector3 vert1, Vector3 vert2, Vector3 vert3)
+    private static Vector3 CalcTriangleCentroid(Vector3 vert1, Vector3 vert2, Vector3 vert3)
     {
         float xCent = (vert1.x + vert2.x + vert3.x) / 3.0f;
         float yCent = (vert1.y + vert2.y + vert3.y) / 3.0f;
@@ -37,7 +37,7 @@ public static class BuildBVH
     /// <param name="triangleVertexStartIndex">The index of the first vertex for this triangle 
     /// within the mesh's triangles array</param>    
     /// <param name="meshTriangleArray">The triangle's array for the mesh containign the triangle </param>
-    private static void addTriangleStruct(ref List<Triangle> triangles, int meshVertexStartIndex, int triangleVertexStartIndex, int[] meshTriangleArray)
+    private static void AddTriangleStruct(ref List<Triangle> triangles, int meshVertexStartIndex, int triangleVertexStartIndex, int[] meshTriangleArray)
     {
         // make struct and add it to list
         Triangle t = new Triangle(){
@@ -67,7 +67,7 @@ public static class BuildBVH
             Vector3 vert1 = vertices[triangles[tri + 1] + vertexStartIndex].position;
             Vector3 vert2 = vertices[triangles[tri + 2] + vertexStartIndex].position;
 
-            Vector3 centroid = calcTriangleCentroid(vert0, vert1, vert2);
+            Vector3 centroid = CalcTriangleCentroid(vert0, vert1, vert2);
 
             bool onLeft = false;
 
@@ -116,8 +116,8 @@ public static class BuildBVH
 
         // Caculate the cost of this division 
         float cost = COST_TRAV + 
-            (calcAABBArea(left) * (COST_ITRSCT * leftBoxTris.Count)) +
-            (calcAABBArea(right) * (COST_ITRSCT * rightBoxTris.Count));
+            (CalcAABBArea(left) * (COST_ITRSCT * leftBoxTris.Count)) +
+            (CalcAABBArea(right) * (COST_ITRSCT * rightBoxTris.Count));
             
         return cost;
     }
@@ -170,7 +170,7 @@ public static class BuildBVH
             bestLeft.primitiveStartIndex = (uint) triangles.Count;
             for(int i = 0; i < bestLeftTris.Count; i++)
             {
-                addTriangleStruct(ref triangles, vertexStartIndex, bestLeftTris[i], meshTriangles);
+                AddTriangleStruct(ref triangles, vertexStartIndex, bestLeftTris[i], meshTriangles);
             }
 
             // add right triangles to list
@@ -178,7 +178,7 @@ public static class BuildBVH
             bestRight.primitiveStartIndex = (uint) triangles.Count;
             for(int i = 0; i < bestRightTris.Count; i++)
             {
-                addTriangleStruct(ref triangles, vertexStartIndex, bestRightTris[i], meshTriangles);
+                AddTriangleStruct(ref triangles, vertexStartIndex, bestRightTris[i], meshTriangles);
             }
 
             // setup root
@@ -194,7 +194,7 @@ public static class BuildBVH
             {
                 bestLeft.primitiveCount = 1;
                 bestLeft.primitiveStartIndex = (uint) triangles.Count;
-                addTriangleStruct(ref triangles, vertexStartIndex, bestLeftTris[0], meshTriangles);
+                AddTriangleStruct(ref triangles, vertexStartIndex, bestLeftTris[0], meshTriangles);
             }
             else
             {
@@ -206,7 +206,7 @@ public static class BuildBVH
             {
                 bestRight.primitiveCount = 1;
                 bestRight.primitiveStartIndex = (uint) triangles.Count;
-                addTriangleStruct(ref triangles, vertexStartIndex, bestRightTris[0], meshTriangles);
+                AddTriangleStruct(ref triangles, vertexStartIndex, bestRightTris[0], meshTriangles);
             }
             else
             {
@@ -250,7 +250,7 @@ public static class BuildBVH
             root.max = Vector3.Max(root.max, vert1);
             root.max = Vector3.Max(root.max, vert2);
 
-            triangleCentroids[i / 3] = calcTriangleCentroid(vert0, vert1, vert2);
+            triangleCentroids[i / 3] = CalcTriangleCentroid(vert0, vert1, vert2);
             tris[i / 3] = i; 
         }
 

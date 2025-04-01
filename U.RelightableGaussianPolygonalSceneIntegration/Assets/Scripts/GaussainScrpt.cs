@@ -9,8 +9,8 @@ public class GaussianScrpt : MonoBehaviour
     [Tooltip("Drop a Gaussian *.ply file here")]
     [SerializeField]
     private DefaultAsset gaussianFile;
-    private string FilePath;
-    public string filePath
+    private string filePath;
+    public string FilePath
     {
         get
         {
@@ -18,7 +18,7 @@ public class GaussianScrpt : MonoBehaviour
             {
                 Debug.LogError("Gaussian *.ply file is NOT set! Please assign a vaild *.ply file in the Inspector");
             }
-            return FilePath;
+            return filePath;
         }
     }
 
@@ -27,17 +27,17 @@ public class GaussianScrpt : MonoBehaviour
         #if UNITY_EDITOR
         if (gaussianFile != null)
         {
-            FilePath = AssetDatabase.GetAssetPath(gaussianFile);
-            if (Path.GetExtension(FilePath).ToLower() != ".ply")
+            filePath = AssetDatabase.GetAssetPath(gaussianFile);
+            if (Path.GetExtension(filePath).ToLower() != ".ply")
             {
-                Debug.LogError("Selected file '" + FilePath + "' is not a *.ply file!");
+                Debug.LogError("Selected file '" + filePath + "' is not a *.ply file!");
                 gaussianFile = null;
-                FilePath = "";
+                filePath = "";
             }
         }
         else
         {
-            FilePath = "";
+            filePath = "";
         }
         #endif
     }

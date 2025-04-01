@@ -60,7 +60,7 @@ void insertionSortAndCull(uint idX, inout uint hitCount, PathHitRecord newHit)
     for (uint cullIdx = 0; cullIdx < hitCount; cullIdx++)
     {
         transmittance *= (1.0 - sortedHitsBuffer[cullIdx + (idX * MAX_HIT)].albedo.w);
-        if (transmittance <= 0.001)
+        if (transmittance <= T_MIN)
         {
             hitCount = cullIdx + 1;
             return;
@@ -136,7 +136,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
             {
-                // maximum gaussian contribution Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
+                // maximum gaussian reponse Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
                 Gaussian gauss = gaussians[aabb.primitiveStartIndex];
 
                 float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
@@ -153,14 +153,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 if (t > 0)
                 {
                     float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
-                    gauss.color.w = opacityAtPoint(rx, gauss);
-                
-                    tmpHit.t = t;
-                    tmpHit.materialType = MATERIAL_EMISSIVE;
-                    tmpHit.albedo = gauss.color;
-                    tmpHit.normal = normalize(rx - gauss.pos);
+                    float opacity = opacityAtPoint(rx, gauss);
 
-                    insertionSortAndCull(id.x, hitCount, tmpHit);
+                    if (opacity > MIN_OPACITY)
+                    {
+                        gauss.color.w = opacity;
+
+                        tmpHit.t = t;
+                        tmpHit.materialType = MATERIAL_EMISSIVE;
+                        tmpHit.albedo = gauss.color;
+                        tmpHit.normal = normalize(rx - gauss.pos);
+
+                        insertionSortAndCull(id.x, hitCount, tmpHit);
+                    }
                 }
 
                 break;
