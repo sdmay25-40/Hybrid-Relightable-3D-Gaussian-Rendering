@@ -133,10 +133,7 @@ float3x3 quatToRotMatrix(float4 q)
 bool rayAABBIntersect(float3 pathOrigin, float3 pathDir, AABB b)
 {
     // TODO: Confirm this is the best (most efficient) AABB intersection method
-    float3 dirfrac;
-    dirfrac.x = 1.0f / pathDir.x;
-    dirfrac.y = 1.0f / pathDir.y;
-    dirfrac.z = 1.0f / pathDir.z;
+    float3 dirfrac = rcp(pathDir);
 
     // calculate t values
     float t1 = (b.min.x - pathOrigin.x) * dirfrac.x;
@@ -150,18 +147,7 @@ bool rayAABBIntersect(float3 pathOrigin, float3 pathDir, AABB b)
     float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
     float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
 
-    // miss
-    if (tmax < 0)
-    {
-        return false;
-    }
-
-    if (tmin > tmax)
-    {
-        return false;
-    }
-
-    return true;
+    return (tmax >= 0 && tmin <= tmax);
 }
 
 /// <summary>
