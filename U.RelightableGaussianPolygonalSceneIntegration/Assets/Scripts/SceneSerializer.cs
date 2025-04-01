@@ -124,27 +124,30 @@ public class SceneSerializer : MonoBehaviour
         materialDatasBuffer.SetData(materialDatas);
 
         // create Gaussian data
-        // TODO: There should be a Gaussian script to attach to game objects
-        const string GAUSSIAN_MODEL_PATH = "3D/LargeSingleGaussian.ply";
-        BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(Application.streamingAssetsPath + "/" + GAUSSIAN_MODEL_PATH);
         List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
-        foreach (BaseGaussian3D g in gaussiansTmp)
+        GaussianScrpt[] gaussianScrpts = FindObjectsOfType<GaussianScrpt>();
+        foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
         {
-            GameObjectData currGameObj = new GameObjectData();
-            currGameObj.normalMatrix = Matrix4x4.identity;
-            currGameObj.worldToObject = Matrix4x4.identity;
-            currGameObj.aabbRootIndex = (uint)aabbs.Count;
-            gameObjectDatas.Add(currGameObj);
-            
-            AABB aabb = new AABB();
-            aabb.primitiveType = PrimType.Gaussian;
-            aabb.primitiveStartIndex = (uint)gaussians.Count;
-            aabb.primitiveCount = 1u;
-            aabbs.Add(aabb);
+            BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.filePath);
+            foreach (BaseGaussian3D g in gaussiansTmp)
+            {
+                GameObjectData currGameObj = new GameObjectData();
+                Transform transform = gaussianScrpt.gameObject.transform;
+                currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
+                currGameObj.worldToObject = transform.worldToLocalMatrix;
+                currGameObj.aabbRootIndex = (uint)aabbs.Count;
+                gameObjectDatas.Add(currGameObj);
+                
+                AABB aabb = new AABB();
+                aabb.primitiveType = PrimType.Gaussian;
+                aabb.primitiveStartIndex = (uint)gaussians.Count;
+                aabb.primitiveCount = 1u;
+                aabbs.Add(aabb);
 
-            gaussians.Add(g.GetPassableStruct());
+                gaussians.Add(g.GetPassableStruct());
+            }
         }
-
+        
         gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
         gaussiansBuffer.SetData(gaussians);
         gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));

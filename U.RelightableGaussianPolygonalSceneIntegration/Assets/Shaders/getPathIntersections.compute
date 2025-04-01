@@ -139,19 +139,20 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 // maximum gaussian contribution Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
                 Gaussian gauss = gaussians[aabb.primitiveStartIndex];
 
-                float4 covTimesPathDir = mul(gauss.cov, path.direction);
+                float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
+                float4 covTimesPathDir = mul(gauss.cov, pathDirObjSpaceFlt4);
 
-                float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - path.origin), 0));
+                float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - pathOriginObjSpace), 1));
                 float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
 
-                float1x4 pathDirT = transpose((float4x1)path.direction);
+                float1x4 pathDirT = transpose((float4x1)pathDirObjSpaceFlt4);
                 float denominator = mul(pathDirT, covTimesPathDir);
 
                 float t = numerator / denominator;
 
                 if (t > 0)
                 {
-                    float3 rx = path.origin + (t * path.direction.xyz);
+                    float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
                     gauss.color.w = opacityAtPoint(rx, gauss);
                 
                     tmpHit.t = t;
