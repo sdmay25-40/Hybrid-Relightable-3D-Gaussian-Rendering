@@ -1,9 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.UIElements;
+
+public enum PrimType : uint
+{
+    Triangle = 0,
+    Gaussian = 1
+}
 
 public enum MaterialType : uint
 {
@@ -20,9 +21,10 @@ public struct AABB
     public Vector3 max;
     public uint leftChildIndex;
     public uint rightChildIndex;
-    public uint triangleCount; // if not a leaf node, set to uint.MaxValue
-    public uint triangleStartIndex;
-    private Vector2 padding;
+    public PrimType primitiveType;
+    public uint primitiveCount; // if not a leaf node, set to uint.MaxValue
+    public uint primitiveStartIndex;
+    private uint padding;
 }
 
 public struct CameraData
@@ -78,4 +80,10 @@ public struct Vertex
     public Vector3 position;
     public Vector3 normal;
     public Vector2 albedoUV;
+}
+
+public static class Utils
+{
+    public const int STACK_SIZE = 50;
+    public const int MAX_HIT = 10;
 }

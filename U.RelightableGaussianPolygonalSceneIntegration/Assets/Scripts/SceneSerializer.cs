@@ -2,10 +2,9 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref Texture2DArray texture2DArray)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray texture2DArray)
     {
         // init camera buffer        
         cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
@@ -17,13 +16,14 @@ public class SceneSerializer : MonoBehaviour
         cameraData.SetData(new CameraData[]{camData});
 
         List<AABB> aabbs = new List<AABB>();
-        List<MaterialData> materialDatas = new List<MaterialData>();
         List<Triangle> triangles = new List<Triangle>();
         List<Vertex> vertices = new List<Vertex>();
+        List<MaterialData> materialDatas = new List<MaterialData>();
         List<Texture2D> textures = new List<Texture2D>();
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
+        // create game object mesh data
         meshRenderers = FindObjectsOfType<MeshRenderer>();
         foreach (MeshRenderer meshRenderer in meshRenderers)
         {
@@ -44,8 +44,9 @@ public class SceneSerializer : MonoBehaviour
             int meshInstanceId = meshFilter.sharedMesh.GetInstanceID();
             if (!meshInstanceToAABB.ContainsKey(meshInstanceId))
             {
-                 Mesh mesh = meshFilter.sharedMesh;
-                 // add vertex data
+                Mesh mesh = meshFilter.sharedMesh;
+
+                // add vertex data
                 uint vertexStartIndex = (uint) vertices.Count;
                 for (int i = 0; i < mesh.vertices.Length; i++)
                 {
@@ -56,10 +57,7 @@ public class SceneSerializer : MonoBehaviour
                     vertices.Add(v);
                 }
 
-                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter.sharedMesh.triangles, 
-                    ref aabbs, ref triangles, ref vertices, vertexStartIndex);
-
-                // we are only creating one AABB per mesh atm so aabb is root
+                aabbRootIndex = BuildBVH.BuildBVHForMesh(meshFilter.sharedMesh.triangles, ref aabbs, ref triangles, ref vertices, vertexStartIndex);
                 meshInstanceToAABB.Add(meshInstanceId, (int) aabbRootIndex);
             }
             else
@@ -118,6 +116,82 @@ public class SceneSerializer : MonoBehaviour
             gameObjectDatas.Add(currGameObj);
         }
 
+        // initialize dummy ComputeBuffer to avoid null reference in forced loop unroll at compile time in insertionSortAndCull()
+        if (triangles.Count > 0)
+        {
+            trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
+            trianglesBuffer.SetData(triangles);
+        }
+        else
+        {
+            trianglesBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+        if (vertices.Count > 0)
+        {
+            verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
+            verticesBuffer.SetData(vertices);
+        }
+        else
+        {
+            verticesBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+        if (materialDatas.Count > 0)
+        {
+            materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
+            materialDatasBuffer.SetData(materialDatas);
+        }
+        else
+        {
+            materialDatasBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+
+        // create Gaussian data
+        List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
+        GaussianScrpt[] gaussianScrpts = FindObjectsOfType<GaussianScrpt>();
+        foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
+        {
+            BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
+            foreach (BaseGaussian3D g in gaussiansTmp)
+            {
+                GameObjectData currGameObj = new GameObjectData();
+                Transform transform = gaussianScrpt.gameObject.transform;
+                currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
+                currGameObj.worldToObject = transform.worldToLocalMatrix;
+                currGameObj.aabbRootIndex = (uint)aabbs.Count;
+                gameObjectDatas.Add(currGameObj);
+                
+                AABB aabb = new AABB();
+                aabb.primitiveType = PrimType.Gaussian;
+                aabb.primitiveStartIndex = (uint)gaussians.Count;
+                aabb.primitiveCount = 1u;
+                aabbs.Add(aabb);
+
+                gaussians.Add(g.GetPassableStruct());
+            }
+        }
+        
+        if (gaussians.Count > 0)
+        {
+            gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
+            gaussiansBuffer.SetData(gaussians);
+        }
+        else
+        {
+            gaussiansBuffer = new ComputeBuffer(1, sizeof(uint));
+        }
+        gameObjectDatasBuffer = null;
+        if (gameObjectDatas.Count > 0)
+        {
+            gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
+            gameObjectDatasBuffer.SetData(gameObjectDatas);
+        }
+        aabbsBuffer = null;
+        if (aabbs.Count > 0)
+        {
+            aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
+            aabbsBuffer.SetData(aabbs);
+        }
+
         // create texture 2D array
         texture2DArray = null;
         if (textures.Count > 0)
@@ -136,18 +210,6 @@ public class SceneSerializer : MonoBehaviour
                 Graphics.CopyTexture(textures[i], 0, 0, texture2DArray, i, 0);
             }
         }
-
-        gameObjectDatasBuffer = new ComputeBuffer(gameObjectDatas.Count, Marshal.SizeOf(typeof(GameObjectData)));
-        aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
-        materialDatasBuffer = new ComputeBuffer(materialDatas.Count, Marshal.SizeOf(typeof(MaterialData)));
-        trianglesBuffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
-        verticesBuffer = new ComputeBuffer(vertices.Count, Marshal.SizeOf(typeof(Vertex)));
-
-        gameObjectDatasBuffer.SetData(gameObjectDatas);
-        aabbsBuffer.SetData(aabbs);
-        materialDatasBuffer.SetData(materialDatas);
-        trianglesBuffer.SetData(triangles);
-        verticesBuffer.SetData(vertices);
     }
 
     public static void UpdateSceneDataBuffer(in Camera cam, ref ComputeBuffer cameraData, in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
@@ -163,7 +225,7 @@ public class SceneSerializer : MonoBehaviour
         {
             GameObjectData currGameObj = gameObjectDatas[i];
             Transform transform = meshRenderers[i].gameObject.transform;
-            currGameObj.normalMatrix = transform.localToWorldMatrix;
+            currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
             currGameObj.worldToObject = transform.worldToLocalMatrix;
             gameObjectDatas[i] = currGameObj;
         }

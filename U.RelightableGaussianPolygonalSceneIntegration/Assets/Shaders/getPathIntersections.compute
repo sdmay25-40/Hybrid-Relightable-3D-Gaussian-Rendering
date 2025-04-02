@@ -1,9 +1,6 @@
 #pragma kernel CSMain
 #include "utils.cginc"
 
-#define STACK_MAX_SIZE 50
-
-
 StructuredBuffer<PathPayload> paths;
 StructuredBuffer<uint> pathsContinueCounter;
 StructuredBuffer<uint> pathsContinueCounterValue;
@@ -13,15 +10,67 @@ StructuredBuffer<AABB> aabbs;
 StructuredBuffer<Triangle> triangles;
 StructuredBuffer<Vertex> vertices;
 StructuredBuffer<MaterialData> materialDatas;
+StructuredBuffer<Gaussian> gaussians;
 Texture2DArray<float4> textures;
 SamplerState samplertextures;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
+RWStructuredBuffer<PathHitRecord> sortedHitsBuffer;
 RWStructuredBuffer<uint> stackBuffer;
 
+// TODO: Is this equivalent to the opacity function?
+/// <source> Sect. 3.1, Eq. 1 https://arxiv.org/pdf/2311.16043#page.4 </source>
+float opacityAtPoint(float3 pos, Gaussian gauss){
+    float4 pointToGaussianOrigin = float4((pos - gauss.pos), 1);
+    float4 invCovTimesPointToGaussianOrigin = mul(gauss.invCov, pointToGaussianOrigin);
+    float exponent = -0.5 * mul(transpose((float4x1)pointToGaussianOrigin), invCovTimesPointToGaussianOrigin);
+    return pow(EULER_NUM, exponent);
+}
 
-// Push an item onto a stack
-void stackPush(inout uint stackSize, uint pathId, uint toPush){
+void insertionSortAndCull(uint idX, inout uint hitCount, PathHitRecord newHit)
+{
+    if (hitCount >= MAX_HIT)
+    {
+        return;
+    }
+
+    // insert new hit
+    uint insertIdx;
+    for (insertIdx = hitCount; insertIdx > 0; insertIdx--)
+    {
+        // storing PathHitRecord increase fps by 10 frames
+        PathHitRecord prevHit = sortedHitsBuffer[insertIdx-1 + (idX * MAX_HIT)];
+        if (prevHit.t <= newHit.t)
+        {
+            break;
+        }
+        sortedHitsBuffer[insertIdx + (idX * MAX_HIT)] = prevHit;
+    }
+
+    sortedHitsBuffer[insertIdx + (idX * MAX_HIT)] = newHit;
+    hitCount++;
+
+    if (hitCount == 1)
+    {
+        return;
+    }
+
+    // cull hits past max opacity
+    float transmittance = 1.0;
+    for (uint cullIdx = 0; cullIdx < hitCount; cullIdx++)
+    {
+        transmittance *= (1.0 - sortedHitsBuffer[cullIdx + (idX * MAX_HIT)].albedo.w);
+        if (transmittance <= T_MIN)
+        {
+            hitCount = cullIdx + 1;
+            return;
+        }
+    }
+}
+
+// push an item onto a stack
+void stackPush(inout uint stackSize, uint pathId, uint toPush)
+{
     if (stackSize >= STACK_MAX_SIZE)
     {
         return;
@@ -30,8 +79,9 @@ void stackPush(inout uint stackSize, uint pathId, uint toPush){
     stackSize++;
 }
 
-// See the top item on a stack
-uint stackPeek(inout uint stackSize, uint pathId){
+// see the top item on a stack
+uint stackPeek(inout uint stackSize, uint pathId)
+{
     if (stackSize <= 0)
     {
         return 0;
@@ -39,8 +89,9 @@ uint stackPeek(inout uint stackSize, uint pathId){
     return stackBuffer[stackSize - 1 + (pathId * STACK_MAX_SIZE)];
 }
 
-// Remove the top item from the stack
-uint stackPop(inout uint stackSize, uint pathId){
+// remove the top item from the stack
+uint stackPop(inout uint stackSize, uint pathId)
+{
     if (stackSize <= 0)
     {
         return 0;
@@ -60,36 +111,76 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     uint pathId = pathsContinueCounter[id.x];
     PathPayload path = paths[pathId];
 
-    PathHitRecord closestHit = pathHitRecords[pathId];
-    closestHit.t = FLT_MAX;
-
+    PathHitRecord tmpHit = pathHitRecords[pathId];
+    uint hitCount = 0;
 
     for (int i = 0; i < gameObjectDataCount; i++)
     {
+        if (hitCount >= MAX_HIT)
+        {
+            break;
+        }
+
         GameObjectData currGameObj = gameObjectDatas[i];
         float3 pathOriginObjSpace = mul(currGameObj.worldToObject, float4(path.origin,1)).xyz;
         float3 pathDirObjSpace = mul(currGameObj.worldToObject, path.direction).xyz;
 
-        AABB aabb = aabbs[currGameObj.aabbRootIndex];
-            
-        // Create a stack and add the root to it.
         uint stackSize = 0;
         stackPush(stackSize, id.x, currGameObj.aabbRootIndex);
 
-        while(stackSize > 0){
-            // Take top AABB off the stack
+        // traverse BVH
+        while (stackSize > 0)
+        {
             uint currAABBIndex = stackPop(stackSize, id.x);
             AABB aabb = aabbs[currAABBIndex];
 
+            if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
+            {
+                // maximum gaussian reponse Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
+                Gaussian gauss = gaussians[aabb.primitiveStartIndex];
 
-            // If the ray intersects this AABB
-            if(rayAABBIntersect(pathOriginObjSpace, float4(pathDirObjSpace, 1), aabb)){
-                // If this is a leaf node check for triangle intersections
-                if(aabb.triangleCount < 4294967295U){
-                    // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-                    for (uint j = 0; j < aabb.triangleCount; j++)
+                float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
+                float4 covTimesPathDir = mul(gauss.cov, pathDirObjSpaceFlt4);
+
+                float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - pathOriginObjSpace), 1));
+                float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
+
+                float1x4 pathDirT = transpose((float4x1)pathDirObjSpaceFlt4);
+                float denominator = mul(pathDirT, covTimesPathDir);
+
+                float t = numerator / denominator;
+
+                if (t > 0)
+                {
+                    float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
+                    float opacity = opacityAtPoint(rx, gauss);
+
+                    if (opacity > MIN_OPACITY)
                     {
-                        Triangle tri = triangles[aabb.triangleStartIndex + j];
+                        gauss.color.w = opacity;
+
+                        tmpHit.t = t;
+                        tmpHit.materialType = MATERIAL_EMISSIVE;
+                        tmpHit.albedo = gauss.color;
+                        tmpHit.normal = normalize(rx - gauss.pos);
+
+                        insertionSortAndCull(id.x, hitCount, tmpHit);
+                    }
+                }
+
+                break;
+            }
+
+            if (rayAABBIntersect(pathOriginObjSpace, pathDirObjSpace, aabb))
+            {
+                // leaf node intersection
+                if(aabb.primitiveCount < 4294967295U)
+                {
+                    // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+                    for (uint j = 0; j < aabb.primitiveCount; j++)
+                    {
+                        Triangle tri = triangles[aabb.primitiveStartIndex + j];
+
                         float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
                         float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
                         float3 p = cross(pathDirObjSpace, aToC);
@@ -117,48 +208,63 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                         }
 
                         float t = dot(q, aToC) * invDet;
-
-                        if (t < closestHit.t && t > 0)
+                        
+                        if (t > 0)
                         {
-                            closestHit.t = t;
+                            tmpHit.t = t;
 
                             MaterialData mat = materialDatas[currGameObj.materialIndex];
-                            closestHit.materialType = mat.type;
+                            tmpHit.materialType = mat.type;
 
                             float w = 1 - u - v;
                             if (mat.type != MATERIAL_TEXTURED)
                             {
-                                closestHit.albedo = mat.albedo;
+                                tmpHit.albedo = mat.albedo;
                             }
                             else
                             {
                                 float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
-                                closestHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
+                                tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
                             }
 
-                            // float4 normal = mul(currGameObj.normalMatrix, float4(cross(aToB, aToC), 0));
-                            // normal.w = 0;
-                            // closestHit.normal = normalize(normal);
                             float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
-                            closestHit.normal = normalize(normal.xyz);
+                            tmpHit.normal = normalize(normal.xyz);
+
+                            insertionSortAndCull(id.x, hitCount, tmpHit);
                         }
                     }
                 }
-                // If this is a tree node add children to the stack
-                else{
+                else
+                {
                     stackPush(stackSize, id.x, aabb.leftChildIndex);
                     stackPush(stackSize, id.x, aabb.rightChildIndex);
                 }
             }
+        }
+    }
 
-            
+    if (hitCount > 0)
+    {
+        PathHitRecord lastHit = sortedHitsBuffer[hitCount-1 + (id.x * MAX_HIT)];
+        tmpHit.t = lastHit.t;
+        tmpHit.materialType = MATERIAL_DIFFUSE;
+        tmpHit.albedo = float4(0,0,0,0);
+        tmpHit.normal = lastHit.normal;
+
+        float accumulatedTransmittance = 1.0;
+        for (uint hitIdx = 0; hitIdx < hitCount; hitIdx++)
+        {
+            PathHitRecord currHit = sortedHitsBuffer[hitIdx + (id.x * MAX_HIT)];
+            if (currHit.materialType == MATERIAL_EMISSIVE)
+            {
+                tmpHit.materialType = MATERIAL_EMISSIVE;
+            }
+
+            tmpHit.albedo += (currHit.albedo * currHit.albedo.w) * accumulatedTransmittance;
+            accumulatedTransmittance *= (1 - currHit.albedo.w);
         }
 
-    }
-   
-    if (closestHit.t < FLT_MAX)
-    {
-        pathHitRecords[pathId] = closestHit;
+        pathHitRecords[pathId] = tmpHit;
 
         uint prevIndex = pathsContinueTmpCounter.IncrementCounter();
         pathsContinueTmpCounter[prevIndex] = pathId;

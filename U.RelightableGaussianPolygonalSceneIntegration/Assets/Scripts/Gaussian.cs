@@ -1,9 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 // Abstract class which stores item common across all types of Gaussians
 public abstract class BaseGaussian3D{
