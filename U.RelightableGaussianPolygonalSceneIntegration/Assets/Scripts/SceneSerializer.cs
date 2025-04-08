@@ -146,12 +146,12 @@ public class SceneSerializer : MonoBehaviour
         }
 
         // create Gaussian data
-        List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
+        List<Gaussian3D> gaussians = new List<Gaussian3D>();
         GaussianScrpt[] gaussianScrpts = FindObjectsOfType<GaussianScrpt>();
         foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
         {
-            BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
-            foreach (BaseGaussian3D g in gaussiansTmp)
+            Gaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
+            foreach (Gaussian3D g in gaussiansTmp)
             {
                 GameObjectData currGameObj = new GameObjectData();
                 Transform transform = gaussianScrpt.gameObject.transform;
@@ -168,7 +168,7 @@ public class SceneSerializer : MonoBehaviour
                 aabbs.Add(aabb);
                 */
 
-                gaussians.Add(g.GetPassableStruct());
+                gaussians.Add(g);
             }
             // Make BVH for Gaussians 
             BuildBVH.BuildBVHForGaussians(gaussians, ref aabbs);
@@ -176,7 +176,7 @@ public class SceneSerializer : MonoBehaviour
         
         if (gaussians.Count > 0)
         {
-            gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
+            gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(Gaussian3D)));
             gaussiansBuffer.SetData(gaussians);
         }
         else

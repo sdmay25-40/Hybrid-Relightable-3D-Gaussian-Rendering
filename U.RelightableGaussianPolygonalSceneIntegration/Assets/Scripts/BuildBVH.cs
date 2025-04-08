@@ -289,10 +289,10 @@ public static class BuildBVH
     /// Calculat the morton codes for all Gaussians 
     /// </summary>
     /// <source>https://www.forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/</source>
-    private static MortonPayload[] CalcMortonCodes(List<BaseGaussian3D.PasssableGaussian3D> gaussians){
+    private static MortonPayload[] CalcMortonCodes(List<Gaussian3D> gaussians){
        MortonPayload[] mortonCodes = new MortonPayload[gaussians.Count];
         for(int i = 0; i < gaussians.Count; i++){
-            BaseGaussian3D.PasssableGaussian3D g = gaussians[i];
+           Gaussian3D g = gaussians[i];
             N.BigInteger x = SplitBy3((int) g.pos.x);
             N.BigInteger y = SplitBy3((int) g.pos.y);
             N.BigInteger z = SplitBy3((int) g.pos.z);
@@ -324,7 +324,7 @@ public static class BuildBVH
     }
 
 
-    private static AABB CreateAABBForGaussian(BaseGaussian3D.PasssableGaussian3D gaussian, uint gaussianIdx){
+    private static AABB CreateAABBForGaussian(Gaussian3D gaussian, uint gaussianIdx){
         AABB aabb = new AABB();
         aabb.primitiveCount = 1;
         aabb.primitiveStartIndex = gaussianIdx;
@@ -371,7 +371,7 @@ public static class BuildBVH
     }
 
     private static void BuildAABBsFromTree(MortonPayload[] mortonCodeTree, ref List<AABB> aabbs, 
-        List<BaseGaussian3D.PasssableGaussian3D> gaussians){
+        List<Gaussian3D> gaussians){
         // Create AABBs for every gaussian primitive
         int lastLayerStartIndex = aabbs.Count;
         int lastLayerCount = 0;
@@ -394,7 +394,7 @@ public static class BuildBVH
     }
 
 
-    public static void BuildBVHForGaussians(List<BaseGaussian3D.PasssableGaussian3D> gaussians,
+    public static void BuildBVHForGaussians(List<Gaussian3D> gaussians,
         ref List<AABB> aabbs){
         // Calculate morton codes for all Gaussians
         MortonPayload[] mortonCodes = CalcMortonCodes(gaussians);
