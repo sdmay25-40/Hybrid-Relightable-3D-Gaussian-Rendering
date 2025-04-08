@@ -134,48 +134,49 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             uint currAABBIndex = stackPop(stackSize, id.x);
             AABB aabb = aabbs[currAABBIndex];
 
-            if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
-            {
-                // maximum gaussian reponse Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
-                Gaussian gauss = gaussians[aabb.primitiveStartIndex];
-
-                float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
-                float4 covTimesPathDir = mul(gauss.cov, pathDirObjSpaceFlt4);
-
-                float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - pathOriginObjSpace), 1));
-                float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
-
-                float1x4 pathDirT = transpose((float4x1)pathDirObjSpaceFlt4);
-                float denominator = mul(pathDirT, covTimesPathDir);
-
-                float t = numerator / denominator;
-
-                if (t > 0)
-                {
-                    float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
-                    float opacity = opacityAtPoint(rx, gauss);
-
-                    if (opacity > MIN_OPACITY)
-                    {
-                        gauss.color.w = opacity;
-
-                        tmpHit.t = t;
-                        tmpHit.materialType = MATERIAL_EMISSIVE;
-                        tmpHit.albedo = gauss.color;
-                        tmpHit.normal = normalize(rx - gauss.pos);
-
-                        insertionSortAndCull(id.x, hitCount, tmpHit);
-                    }
-                }
-
-                break;
-            }
-
             if (rayAABBIntersect(pathOriginObjSpace, pathDirObjSpace, aabb))
             {
                 // leaf node intersection
                 if(aabb.primitiveCount < 4294967295U)
                 {
+
+                    if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
+                    {
+                        // maximum gaussian reponse Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
+                        Gaussian gauss = gaussians[aabb.primitiveStartIndex];
+
+                        float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
+                        float4 covTimesPathDir = mul(gauss.cov, pathDirObjSpaceFlt4);
+
+                        float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - pathOriginObjSpace), 1));
+                        float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
+
+                        float1x4 pathDirT = transpose((float4x1)pathDirObjSpaceFlt4);
+                        float denominator = mul(pathDirT, covTimesPathDir);
+
+                        float t = numerator / denominator;
+
+                        if (t > 0)
+                        {
+                            float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
+                            float opacity = opacityAtPoint(rx, gauss);
+
+                            if (opacity > MIN_OPACITY)
+                            {
+                                gauss.color.w = opacity;
+
+                                tmpHit.t = t;
+                                tmpHit.materialType = MATERIAL_EMISSIVE;
+                                tmpHit.albedo = gauss.color;
+                                tmpHit.normal = normalize(rx - gauss.pos);
+
+                                insertionSortAndCull(id.x, hitCount, tmpHit);
+                            }
+                        }
+
+                        break;
+                    }
+
                     // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
                     for (uint j = 0; j < aabb.primitiveCount; j++)
                     {

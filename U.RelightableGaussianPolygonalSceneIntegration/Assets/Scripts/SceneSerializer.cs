@@ -160,14 +160,18 @@ public class SceneSerializer : MonoBehaviour
                 currGameObj.aabbRootIndex = (uint)aabbs.Count;
                 gameObjectDatas.Add(currGameObj);
                 
+                /*
                 AABB aabb = new AABB();
                 aabb.primitiveType = PrimType.Gaussian;
                 aabb.primitiveStartIndex = (uint)gaussians.Count;
                 aabb.primitiveCount = 1u;
                 aabbs.Add(aabb);
+                */
 
                 gaussians.Add(g.GetPassableStruct());
             }
+            // Make BVH for Gaussians 
+            BuildBVH.BuildBVHForGaussians(gaussians, ref aabbs);
         }
         
         if (gaussians.Count > 0)

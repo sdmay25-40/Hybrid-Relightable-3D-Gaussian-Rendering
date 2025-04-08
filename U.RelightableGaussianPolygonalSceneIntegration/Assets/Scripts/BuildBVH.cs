@@ -1,5 +1,12 @@
 using System.Collections.Generic;
+// Needed to shorten use of big integer without introducing confusion between 
+// Unity and System types
+using N = System.Numerics; 
 using UnityEngine;
+using System;
+using MathNet.Numerics.LinearAlgebra;
+using Unity.VisualScripting;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 
 public static class BuildBVH 
 {   
@@ -261,4 +268,144 @@ public static class BuildBVH
 
         return (uint) (aabbList.Count - 1);
     }
+
+
+    /// <summary>
+    /// Expand the bits in a number to have gaps as part of morton code encoding.
+    /// </summary>
+    /// <source>https://www.forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations//</source>
+    private static N.BigInteger SplitBy3(int a){
+        N.BigInteger x = a;
+        x = (x | x << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+        x = (x | x << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+        x = (x | x << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+        x = (x | x << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+        x = (x | x << 2) & 0x1249249249249249;
+
+        return x;
+    }
+
+    /// <summary>
+    /// Calculat the morton codes for all Gaussians 
+    /// </summary>
+    /// <source>https://www.forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/</source>
+    private static MortonPayload[] CalcMortonCodes(List<BaseGaussian3D.PasssableGaussian3D> gaussians){
+       MortonPayload[] mortonCodes = new MortonPayload[gaussians.Count];
+        for(int i = 0; i < gaussians.Count; i++){
+            BaseGaussian3D.PasssableGaussian3D g = gaussians[i];
+            N.BigInteger x = SplitBy3((int) g.pos.x);
+            N.BigInteger y = SplitBy3((int) g.pos.y);
+            N.BigInteger z = SplitBy3((int) g.pos.z);
+
+            MortonPayload p;
+            p.mortonCode = x | y << 1 | z << 2;
+            p.gaussianIdx = i;
+
+            mortonCodes[i] = p;
+    
+        }
+
+        return mortonCodes;
+
+    }
+
+    /// <summary>
+    /// Convert a Gaussian's covariance matrix stored as a 4x4 Unity matrix to 
+    /// a 3x3 MathDotNet Matrix. 
+    /// </summary>
+    private static Matrix<float> ConvertCovMatrixToMathNetMatrix(Matrix4x4 toConvert){
+        Matrix<float> m = Matrix<float>.Build.Dense(3, 3);
+        for(int i = 0; i < 3; i++){
+            float[] row = {toConvert.GetRow(i).x, toConvert.GetRow(i).y, toConvert.GetRow(i).z};
+            m.SetRow(0, row);
+        }
+
+        return m;
+    }
+
+
+    private static AABB CreateAABBForGaussian(BaseGaussian3D.PasssableGaussian3D gaussian, uint gaussianIdx){
+        AABB aabb = new AABB();
+        aabb.primitiveCount = 1;
+        aabb.primitiveStartIndex = gaussianIdx;
+        aabb.primitiveType = PrimType.Gaussian;
+
+
+        /* Algorithm: Find standard deviation for each dimension * it by 1 + % of data to capute.
+        Then use that to find min/max
+        */   
+
+        Matrix<float> covAsMathNetMatrix = ConvertCovMatrixToMathNetMatrix(gaussian.cov);
+        // There's an argument for writing this ourselves but it wouldn't be fun
+        Evd<float> evd = covAsMathNetMatrix.Evd();
+
+        float standardDeviationX = MathF.Sqrt((float) evd.EigenValues[0].Real);
+        float standardDeviationY = MathF.Sqrt((float) evd.EigenValues[1].Real);
+        float standardDeviationZ = MathF.Sqrt((float) evd.EigenValues[2].Real);
+
+        Vector3 s1 = 3.0f * standardDeviationX * new Vector3(evd.EigenVectors.Column(0)[0], evd.EigenVectors.Column(0)[1],
+            evd.EigenVectors.Column(0)[2]);
+        Vector3 s2 = 3.0f * standardDeviationY * new Vector3(evd.EigenVectors.Column(1)[0], evd.EigenVectors.Column(1)[1],
+            evd.EigenVectors.Column(1)[2]);
+        Vector3 s3 = 3.0f * standardDeviationZ * new Vector3(evd.EigenVectors.Column(2)[0], evd.EigenVectors.Column(2)[1],
+            evd.EigenVectors.Column(2)[2]);
+
+
+        aabb.min = gaussian.pos - s1 - s2 - s3;
+        aabb.max = gaussian.pos + s1 + s2 + s3;
+
+        return aabb;
+    }
+
+    private static void CreateParentNode(int leftIdx, int rightIdx, ref List<AABB> aabbs){
+        AABB aabb = new AABB();
+
+        aabb.primitiveCount = uint.MaxValue;
+        aabb.leftChildIndex = (uint) leftIdx;
+        aabb.rightChildIndex = (uint) rightIdx;   
+
+        aabb.min = Vector3.Min(aabbs[leftIdx].min, aabbs[rightIdx].min);
+        aabb.max = Vector3.Max(aabbs[leftIdx].max, aabbs[rightIdx].max);
+
+        aabbs.Add(aabb);
+    }
+
+    private static void BuildAABBsFromTree(MortonPayload[] mortonCodeTree, ref List<AABB> aabbs, 
+        List<BaseGaussian3D.PasssableGaussian3D> gaussians){
+        // Create AABBs for every gaussian primitive
+        int lastLayerStartIndex = aabbs.Count;
+        int lastLayerCount = 0;
+        foreach(MortonPayload mortonCode in mortonCodeTree){
+            aabbs.Add(CreateAABBForGaussian(gaussians[mortonCode.gaussianIdx], (uint) mortonCode.gaussianIdx));
+            lastLayerCount++;
+        }
+
+        // Build BVH from AABBs
+        while(lastLayerCount > 1){
+            int thisLayerStartIndex = aabbs.Count;
+            int thisLayerCount = 0;
+            for(int i = 0; i < lastLayerCount; i+=2){
+                CreateParentNode(lastLayerStartIndex + i, lastLayerStartIndex + i +1, ref aabbs);
+                thisLayerCount += 1;
+            }
+            lastLayerStartIndex = thisLayerStartIndex;
+            lastLayerCount = thisLayerCount;
+        }
+    }
+
+
+    public static void BuildBVHForGaussians(List<BaseGaussian3D.PasssableGaussian3D> gaussians,
+        ref List<AABB> aabbs){
+        // Calculate morton codes for all Gaussians
+        MortonPayload[] mortonCodes = CalcMortonCodes(gaussians);
+
+        // Sort Morton codes to create tree
+        Array.Sort(mortonCodes, new MortonPayloadComp());
+
+        // Create AABBs 
+        BuildAABBsFromTree(mortonCodes, ref aabbs, gaussians);
+
+    }
+
+
 }

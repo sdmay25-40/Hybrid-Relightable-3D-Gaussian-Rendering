@@ -1,4 +1,6 @@
+using N = System.Numerics;
 using UnityEngine;
+using System.Collections.Generic;
 
 public enum PrimType : uint
 {
@@ -81,6 +83,20 @@ public struct Vertex
     public Vector3 normal;
     public Vector2 albedoUV;
 }
+
+public class MortonPayloadComp : IComparer<MortonPayload>
+{
+
+    public int Compare(MortonPayload x, MortonPayload y)
+    {
+        return x.mortonCode.CompareTo(y.mortonCode);
+    }
+}
+
+public struct MortonPayload{
+    public N.BigInteger mortonCode;
+    public int gaussianIdx;
+};
 
 public static class Utils
 {
