@@ -62,8 +62,7 @@ struct PathHitRecord
 struct PathPayload
 {
     float4 direction;
-    float3 origin;
-    uint bounce;
+    float4 origin;
     float4 throughput;
 };
 

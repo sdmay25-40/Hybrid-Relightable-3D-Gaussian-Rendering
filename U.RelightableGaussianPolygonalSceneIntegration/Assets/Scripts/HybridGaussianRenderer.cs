@@ -107,8 +107,7 @@ public class HybridGaussianRenderer : MonoBehaviour
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
         }
 
-        // TODO: remove bounce from Path struct (create a int buffer to keep count in the loop)
-        for(uint i = 0; i < pathBounceLimit + 1; i++)
+        for (int i = 0; i < pathBounceLimit + 1; i++)
         {
             commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
             commandBuffer.CopyCounterValue(pathsContinueCounter, pathsContinueCounterValue, 0);
@@ -146,7 +145,7 @@ public class HybridGaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "pathsPerPixel", pathsPerPixel);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "screenWidth", Screen.width);
-                commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounceLimit", pathBounceLimit);
+                commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounce", i);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "paths", paths);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
                 commandBuffer.SetComputeTextureParam(samplePathIntersections, kernelIndex, "renderTexture", renderTexture);

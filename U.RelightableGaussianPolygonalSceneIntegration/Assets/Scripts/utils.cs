@@ -62,8 +62,7 @@ public struct PathHitRecord
 public struct PathPayload
 {
     public Vector4 direction;
-    public Vector3 origin;
-    public uint bounce;
+    public Vector4 origin;
     public Vector4 throughput;
 }
 

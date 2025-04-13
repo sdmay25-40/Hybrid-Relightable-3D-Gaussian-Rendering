@@ -122,7 +122,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
 
         GameObjectData currGameObj = gameObjectDatas[i];
-        float3 pathOriginObjSpace = mul(currGameObj.worldToObject, float4(path.origin,1)).xyz;
+        float3 pathOriginObjSpace = mul(currGameObj.worldToObject, path.origin).xyz;
         float3 pathDirObjSpace = mul(currGameObj.worldToObject, path.direction).xyz;
 
         uint stackSize = 0;
