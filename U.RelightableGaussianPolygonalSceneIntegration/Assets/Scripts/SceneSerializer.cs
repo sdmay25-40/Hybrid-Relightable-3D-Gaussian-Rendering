@@ -1,19 +1,15 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray texture2DArray)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref CameraData prevCameraData, ref Dictionary<Transform, SimpleTransform> transformToPrevTransform, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray texture2DArray)
     {
-        // init camera buffer        
+        // init camera buffer
         cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
-        CameraData camData = new CameraData
-        {
-            position = new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f),
-            quaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
-        };
-        cameraData.SetData(new CameraData[]{camData});
+        SetCameraDataBuffer(Utils.GetCameraPosition(cam), cam.transform.rotation, ref cameraData, ref prevCameraData);
 
         List<AABB> aabbs = new List<AABB>();
         List<Triangle> triangles = new List<Triangle>();
@@ -24,7 +20,7 @@ public class SceneSerializer : MonoBehaviour
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
         // create game object mesh data
-        meshRenderers = FindObjectsOfType<MeshRenderer>();
+        MeshRenderer[] meshRenderers = FindObjectsOfType<MeshRenderer>();
         foreach (MeshRenderer meshRenderer in meshRenderers)
         {
             GameObjectData currGameObj = new GameObjectData();
@@ -114,6 +110,15 @@ public class SceneSerializer : MonoBehaviour
             currGameObj.materialIndex = materialIndex;
 
             gameObjectDatas.Add(currGameObj);
+
+            Transform t = meshRenderer.gameObject.transform;
+            SimpleTransform st = new SimpleTransform
+            {
+                position = t.position,
+                rotation = t.rotation,
+                scale = t.localScale
+            };
+            transformToPrevTransform.Add(t, st);
         }
 
         // initialize dummy ComputeBuffer to avoid null reference in forced loop unroll at compile time in insertionSortAndCull()
@@ -159,6 +164,14 @@ public class SceneSerializer : MonoBehaviour
                 currGameObj.worldToObject = transform.worldToLocalMatrix;
                 currGameObj.aabbRootIndex = (uint)aabbs.Count;
                 gameObjectDatas.Add(currGameObj);
+
+                SimpleTransform st = new SimpleTransform
+                {
+                    position = transform.position,
+                    rotation = transform.rotation,
+                    scale = transform.localScale
+                };
+                transformToPrevTransform.Add(transform, st);
                 
                 AABB aabb = new AABB();
                 aabb.primitiveType = PrimType.Gaussian;
@@ -212,23 +225,13 @@ public class SceneSerializer : MonoBehaviour
         }
     }
 
-    public static void UpdateSceneDataBuffer(in Camera cam, ref ComputeBuffer cameraData, in MeshRenderer[] meshRenderers, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer)
+    public static void SetCameraDataBuffer(in Vector4 camPos, in Quaternion camRot, ref ComputeBuffer cameraData, ref CameraData prevCameraData)
     {
-        CameraData camData = new CameraData
+        prevCameraData = new CameraData
         {
-            position = new Vector4(cam.transform.position.x, cam.transform.position.y, cam.transform.position.z, 1.0f),
-            quaternion = new Vector4(cam.transform.rotation.x, cam.transform.rotation.y, cam.transform.rotation.z, cam.transform.rotation.w)
+            position = camPos,
+            quaternion = camRot
         };
-        cameraData.SetData(new CameraData[]{camData});
-
-        for (int i = 0; i < meshRenderers.Length; i++)
-        {
-            GameObjectData currGameObj = gameObjectDatas[i];
-            Transform transform = meshRenderers[i].gameObject.transform;
-            currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
-            currGameObj.worldToObject = transform.worldToLocalMatrix;
-            gameObjectDatas[i] = currGameObj;
-        }
-        gameObjectDatasBuffer.SetData(gameObjectDatas);
+        cameraData.SetData(new CameraData[]{prevCameraData});
     }
 }

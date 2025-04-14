@@ -1,5 +1,5 @@
 #pragma kernel CSMain
-#include "utils.cginc"
+#include "Utils.cginc"
 
 int pathCount;
 int pathsPerPixel;

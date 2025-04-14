@@ -30,7 +30,7 @@ public struct AABB
 public struct CameraData
 {
     public Vector4 position;
-    public Vector4 quaternion;
+    public Quaternion quaternion;
 }
 
 public struct GameObjectData
@@ -81,8 +81,21 @@ public struct Vertex
     public Vector2 albedoUV;
 }
 
+public struct SimpleTransform
+{
+    public Vector3 position;
+    public Quaternion rotation;
+    public Vector3 scale;
+}
+
 public static class Utils
 {
     public const int STACK_SIZE = 50;
     public const int MAX_HIT = 10;
+
+    public static Vector4 GetCameraPosition(in Camera cam)
+    {
+        Vector3 pos = cam.transform.position;
+        return new Vector4(pos.x, pos.y, pos.z, 1.0f);
+    }
 }
