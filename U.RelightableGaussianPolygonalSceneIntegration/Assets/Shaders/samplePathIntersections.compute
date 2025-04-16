@@ -1,5 +1,5 @@
 #pragma kernel CSMain
-#include "utils.cginc"
+#include "Utils.cginc"
 
 StructuredBuffer<uint> frameIndex;
 StructuredBuffer<uint> pathsContinueTmpCounter;
@@ -7,7 +7,7 @@ StructuredBuffer<uint> pathsContinueTmpCounterValue;
 StructuredBuffer<PathHitRecord> pathHitRecords;
 int pathsPerPixel;
 int screenWidth;
-int pathBounceLimit;
+int pathBounce;
 RWStructuredBuffer<PathPayload> paths;
 RWStructuredBuffer<uint> pathsContinueCounter;
 RWTexture2D<float4> renderTexture;
@@ -35,13 +35,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     }
 
     // add normal offset to avoid collision with itself
-    paths[pathId].origin += (hitRecord.t * paths[pathId].direction).xyz +  hitRecord.normal * EPSILON;
+    paths[pathId].origin += hitRecord.t * paths[pathId].direction + float4(hitRecord.normal,0) * EPSILON;
 
     // cosine weighted sample accounts for Lambert's Law
-    int seed = getSeed(paths[pathId].bounce, frameIndex[0]);
+    int seed = getSeed(pathBounce, frameIndex[0]);
     float3 reflect = randCosHemisphereSample(hitRecord.normal, pixelIndex, seed);
     paths[pathId].direction = float4(reflect, 0);
-    paths[pathId].bounce++;
 
     // Lambertian Diffuse BRDF
     paths[pathId].throughput *= hitRecord.albedo / PI;

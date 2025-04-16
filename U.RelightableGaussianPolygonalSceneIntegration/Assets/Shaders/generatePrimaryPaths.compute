@@ -1,5 +1,5 @@
 #pragma kernel CSMain
-#include "utils.cginc"
+#include "Utils.cginc"
 
 int pathCount;
 int pathsPerPixel;
@@ -30,8 +30,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3x3 cameraToWorld = quatToRotMatrix(cameraData[0].quaternion);
     float3 pixelDirWorldSpace = normalize(mul(cameraToWorld, pixelDirCamSpace));
     paths[pathId].direction = float4(pixelDirWorldSpace, 0);
-    paths[pathId].origin = cameraData[0].position.xyz;
-    paths[pathId].bounce = 0;
+    paths[pathId].origin = cameraData[0].position;
     paths[pathId].throughput = float4(1,1,1,1);
 
     uint prevIndex = pathsContinueCounter.IncrementCounter();
