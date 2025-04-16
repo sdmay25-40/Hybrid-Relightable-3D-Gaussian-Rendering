@@ -15,10 +15,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // convert color from linear to sRGB color space
     float3 currentColor = (float3)currentFrameBuffer[getLinearPixelIndex(id.xy, screenWidth)] / COLOR_SCALE;
-    currentColor = pow(abs(currentColor), 1/2.2);
-
     float alpha = rcp(frameIndex[0] + 1.0);
     float4 accumulatedColor = accumulationTexture[id.xy];
 

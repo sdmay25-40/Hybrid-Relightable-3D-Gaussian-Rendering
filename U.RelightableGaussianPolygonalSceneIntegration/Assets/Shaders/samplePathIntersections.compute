@@ -27,12 +27,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     if (hitRecord.materialType == MATERIAL_EMISSIVE)
     {
-        // TODO: write to texture; += causes access issues w/ pathsPerPixel > 1
-        // float invPathsPerPixel = 1.0 / pathsPerPixel;
-        // renderTexture[pixelIndex] += paths[pathId].throughput * hitRecord.albedo * invPathsPerPixel;
-        // renderTexture[pixelIndex] = paths[pathId].throughput * hitRecord.albedo;
+        uint idx = (pathId / pathsPerPixel);
+        float invPathsPerPixel = 1.0 / pathsPerPixel;
+        uint3 color = (uint3) (paths[pathId].throughput * hitRecord.albedo * invPathsPerPixel * COLOR_SCALE).xyz;
 
-        currentFrameBuffer[(pathId / pathsPerPixel)] = (uint3) (paths[pathId].throughput * hitRecord.albedo * COLOR_SCALE).xyz;
+        InterlockedAdd(currentFrameBuffer[idx].x, color.x);
+        InterlockedAdd(currentFrameBuffer[idx].y, color.y);
+        InterlockedAdd(currentFrameBuffer[idx].z, color.z);
+
         return;
     }
 
