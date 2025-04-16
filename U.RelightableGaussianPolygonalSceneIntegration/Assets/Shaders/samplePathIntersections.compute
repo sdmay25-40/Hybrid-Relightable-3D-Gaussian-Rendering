@@ -10,7 +10,7 @@ int screenWidth;
 int pathBounce;
 RWStructuredBuffer<PathPayload> paths;
 RWStructuredBuffer<uint> pathsContinueCounter;
-RWTexture2D<float4> renderTexture;
+RWStructuredBuffer<uint3> currentFrameBuffer;
 
 [numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -30,7 +30,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         // TODO: write to texture; += causes access issues w/ pathsPerPixel > 1
         // float invPathsPerPixel = 1.0 / pathsPerPixel;
         // renderTexture[pixelIndex] += paths[pathId].throughput * hitRecord.albedo * invPathsPerPixel;
-        renderTexture[pixelIndex] = paths[pathId].throughput * hitRecord.albedo;
+        // renderTexture[pixelIndex] = paths[pathId].throughput * hitRecord.albedo;
+
+        currentFrameBuffer[(pathId / pathsPerPixel)] = (uint3) (paths[pathId].throughput * hitRecord.albedo * COLOR_SCALE).xyz;
         return;
     }
 

@@ -13,6 +13,10 @@
 #define MIN_OPACITY 0.01
 #define T_MIN 0.001
 
+// max color: ~4096
+// min step: ~0.00000095
+#define COLOR_SCALE 1048576.0
+
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
 struct AABB
@@ -106,6 +110,11 @@ struct Gaussian
     */
     uint gaussianType;
 };
+
+uint getLinearPixelIndex(uint2 id, int screenWidth)
+{
+    return id.x + id.y * screenWidth;
+}
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>
 uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)

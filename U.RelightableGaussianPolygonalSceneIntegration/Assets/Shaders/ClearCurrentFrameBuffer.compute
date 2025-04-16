@@ -1,0 +1,17 @@
+#pragma kernel CSMain
+#include "Utils.cginc"
+
+int screenWidth;
+int screenHeight;
+RWStructuredBuffer<uint3> currentFrameBuffer;
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) screenWidth || id.y >= (uint) screenHeight)
+    {
+        return;
+    }
+
+    currentFrameBuffer[getLinearPixelIndex(id.xy, screenWidth)] = uint3(0,0,0);
+}
