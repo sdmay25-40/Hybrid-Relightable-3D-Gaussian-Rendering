@@ -62,10 +62,9 @@ public class HybridGaussianRenderer : MonoBehaviour
         frameIndex = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
         frameIndex.SetData(new uint[]{0});
 
-        int pathCount = Screen.width * Screen.height * pathsPerPixel;
-
-        // currentFrameBuffer = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
         currentFrameBuffer = new ComputeBuffer(Screen.width * Screen.height, sizeof(uint) * 3);
+
+        int pathCount = Screen.width * Screen.height * pathsPerPixel;
         paths = new ComputeBuffer(pathCount,  Marshal.SizeOf(typeof(PathPayload)));
         pathHitRecords = new ComputeBuffer(pathCount, Marshal.SizeOf(typeof(PathHitRecord)));
         pathsContinueCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
