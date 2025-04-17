@@ -12,6 +12,11 @@
 #define MAX_HIT 10
 #define MIN_OPACITY 0.01
 #define T_MIN 0.001
+#define MAX_BOUNCE_SENTINEL 1000000u
+
+// max color: ~4096
+// min step: ~0.00000095
+#define COLOR_SCALE 1048576.0
 
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
@@ -107,6 +112,11 @@ struct Gaussian
     uint gaussianType;
 };
 
+uint getLinearPixelIndex(uint2 id, int screenWidth)
+{
+    return id.x + id.y * screenWidth;
+}
+
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>
 uint2 getPixelIndex(uint pathId, int pathsPerPixel, int screenWidth)
 {
@@ -152,13 +162,12 @@ bool rayAABBIntersect(float3 pathOrigin, float3 pathDir, AABB b)
 }
 
 /// <summary>
-/// Generates a unique seed for each frame and bounce iteration. Seed values above 500,000 generate visual
+/// Generates a unique seed for each frame, bounce, and path iteration. Seed values above 501,000 generate visual
 /// artifacts caused by floating-point precision issues in rand2(). Values +86,213,428 generate no output.
 /// </summary>
-uint getSeed(uint bounce, uint frameIndex)
+uint getSeed(uint bounce, uint frameIndex, uint pathId)
 {
-    // TODO: add pathId as unique identifier; multiple paths per pixel will generate the same random number
-    return ((frameIndex * 73856093u) ^ (bounce * 19349663u)) % 500000u;
+    return ((frameIndex * 73856093u) ^ (bounce * 19349663u) ^ (pathId * 83492791u)) % 500000u;
 }
 
 /// <source> https://www.shadertoy.com/view/4djSRW </source>
