@@ -42,7 +42,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     paths[pathId].origin += hitRecord.t * paths[pathId].direction + float4(hitRecord.normal,0) * EPSILON;
 
     // cosine weighted sample accounts for Lambert's Law
-    int seed = getSeed(pathBounce, frameIndex[0]);
+    int seed = getSeed(pathBounce, frameIndex[0], pathId);
     float3 reflect = randCosHemisphereSample(hitRecord.normal, pixelIndex, seed);
     paths[pathId].direction = float4(reflect, 0);
 

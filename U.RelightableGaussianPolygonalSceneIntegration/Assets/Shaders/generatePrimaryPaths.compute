@@ -7,6 +7,7 @@ int screenWidth;
 float invScreenHeight;
 float tanFovHalf;
 StructuredBuffer<CameraData> cameraData;
+StructuredBuffer<uint> frameIndex;
 RWStructuredBuffer<PathPayload> paths; 
 RWStructuredBuffer<uint> pathsContinueCounter;
 
@@ -19,9 +20,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     }
 
     uint pathId = id.x;
-    uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
-    float pixelDirXCamSpace = ((2 * pixelIndex.x + 1) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
-    float pixelDirYCamSpace = ((2 * pixelIndex.y + 1) * invScreenHeight - 1) * tanFovHalf;
+    float2 pixelIndex = (float2) getPixelIndex(pathId, pathsPerPixel, screenWidth);
+
+    // jittered sampling anti-aliasing
+    uint seed = getSeed(MAX_BOUNCE_SENTINEL, frameIndex[0], pathId);
+    pixelIndex += rand2(pixelIndex, seed);
+
+    float pixelDirXCamSpace = ((2 * pixelIndex.x) * invScreenHeight - screenWidth * invScreenHeight) * tanFovHalf;
+    float pixelDirYCamSpace = ((2 * pixelIndex.y) * invScreenHeight - 1) * tanFovHalf;
 
     // camera's image plane is at z = 1
     float3 pixelDirCamSpace = float3(pixelDirXCamSpace, pixelDirYCamSpace, 1);

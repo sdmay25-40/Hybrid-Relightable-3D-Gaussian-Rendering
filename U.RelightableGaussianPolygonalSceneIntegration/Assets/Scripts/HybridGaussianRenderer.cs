@@ -109,6 +109,7 @@ public class HybridGaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraData", cameraData);
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "frameIndex", frameIndex);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
