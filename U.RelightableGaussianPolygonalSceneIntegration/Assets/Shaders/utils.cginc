@@ -1,4 +1,6 @@
 #define FLT_MAX 3.402823e+38
+// Upgrade NOTE: excluded shader from DX11 because it uses wrong array syntax (type[size] name)
+#pragma exclude_renderers d3d11
 #define UINT_MAX 4294967295U
 #define EPSILON 1e-6
 #define PI 3.14159265359
@@ -88,24 +90,7 @@ struct Gaussian
     float4x4 cov;
     float4x4 invCov;
     float4 color;
-    uint shCoefficientsIndex; // index of Spherical harmonics coefficients in buffer
-    uint shCoefficientsNum; // number of spherical harmonics coefficients
-    float3 normal;
-    // PBR Propeties (Color is used for albedo)
-    float roughness;
-    float metalness;
-    float specular;
-    float opacity;
-    float ambientOcclusion;
-    float refraction;
-    float emissive;
-    /*
-    Used like an enum  to denote what type of Gaussian (in the .ply file) this is
-    0 = simpleGaussian3D
-    1 = gaussian3D
-    2 = relightableGaussian3D
-    */
-    uint gaussianType;
+    float shCoefficients[45];
 };
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>

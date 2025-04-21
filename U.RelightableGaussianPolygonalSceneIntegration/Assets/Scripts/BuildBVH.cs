@@ -409,6 +409,7 @@ public static class BuildBVH
             lastLayerStartIndex = thisLayerStartIndex;
             lastLayerCount = thisLayerCount;
         }
+        
     }
 
 

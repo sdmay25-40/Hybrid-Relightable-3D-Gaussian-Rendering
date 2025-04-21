@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using MathNet.Numerics.LinearAlgebra;
+using Unity.VisualScripting;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 
@@ -19,36 +23,58 @@ public static class GaussianHelper{
 
 }
 
-
-
 public struct Gaussian3D{
     public Vector3 pos;
     public Matrix4x4 cov;
     public Matrix4x4 invCov;
     public Vector4 color;
         
-    // Index of Spherical harmonics coefficients in buffer
-    public uint shCoefficientsIndex;
-    // Number of spherical harmonics coefficients
-    public uint shCoefficientsNum;
-
-    public Vector3 normal;
-
-    // PBR Propeties (Color is used for albedo)
-    public float roughness;
-    public float metalness;
-    public float specular;
-    public float opacity;
-    public float ambientOcclusion;
-    public float refraction;
-    public float emissive;
-    /*
-    Used like an enum  to denote what type of Gaussian (in the .ply file) this is
-    0 = simpleGaussian3D
-    1 = gaussian3D
-    2 = relightableGaussian3D
-    */
-    public uint gaussianType;
+    // Spherical Harmonics Coefficients
+    public float shCoefficient0;
+    public float shCoefficient1;
+    public float shCoefficient2;
+    public float shCoefficient3;
+    public float shCoefficient4;
+    public float shCoefficient5;
+    public float shCoefficient6;
+    public float shCoefficient7;
+    public float shCoefficient8;
+    public float shCoefficient9;
+    public float shCoefficient10;
+    public float shCoefficient11;
+    public float shCoefficient12;
+    public float shCoefficient13;
+    public float shCoefficient14;
+    public float shCoefficient15;
+    public float shCoefficient16;
+    public float shCoefficient17;
+    public float shCoefficient18;
+    public float shCoefficient19;
+    public float shCoefficient20;
+    public float shCoefficient21;
+    public float shCoefficient22;
+    public float shCoefficient23;
+    public float shCoefficient24;
+    public float shCoefficient25;
+    public float shCoefficient26;
+    public float shCoefficient27;
+    public float shCoefficient28;
+    public float shCoefficient29;
+    public float shCoefficient30;
+    public float shCoefficient31;
+    public float shCoefficient32;
+    public float shCoefficient33;
+    public float shCoefficient34;
+    public float shCoefficient35;
+    public float shCoefficient36;
+    public float shCoefficient37;
+    public float shCoefficient38;
+    public float shCoefficient39;
+    public float shCoefficient40;
+    public float shCoefficient41;
+    public float shCoefficient42;
+    public float shCoefficient43;
+    public float shCoefficient44;
 }
 
 
@@ -57,77 +83,74 @@ public struct Gaussian3D{
 public class GaussianPlyParser 
 {
 
-    public static Matrix4x4 CreateCovarianceMatrix(float xScale, float yScale, float zScale, 
-        float qX, float qY, float qZ, float qW)
+    public static Matrix4x4 CreateCovarianceMatrix(Vector3 scale, Quaternion rot)
     {
-        Matrix4x4 scaleMat = Matrix4x4.Scale(new Vector3(xScale, yScale, zScale));
-        Matrix4x4 rotMat = Matrix4x4.Rotate(new Quaternion(qX, qY, qZ, qW));
+        Matrix4x4 scaleMat = Matrix4x4.Scale(scale);
+        Matrix4x4 rotMat = Matrix4x4.Rotate(rot);
 
 
         // Create covariance matrix from scale and rotation 
        return rotMat * scaleMat * Matrix4x4.Transpose(scaleMat) * Matrix4x4.Transpose(rotMat);        
     }
 
-
-    public static Gaussian3D CreateSimpleGaussian3D(float x, float y, float z, 
-        float xScale, float yScale, float zScale, 
-        float qX, float qY, float qZ, float qW, 
-        float r, float g, float b, float a)
+    public static Gaussian3D CreateGaussian3D(Vector3 centerPos, Vector4 albedo, Vector3 scale, Quaternion rot, 
+        float[] shCoefficients)
     {
-        Matrix4x4 covariance = CreateCovarianceMatrix(xScale, yScale, zScale, qX, qY, qZ, qW);
+        Matrix4x4 covariance = CreateCovarianceMatrix(scale, rot);
         Gaussian3D p = new()
         {
-            pos = new Vector3(x, y, z),
+            pos = centerPos,
+            color = albedo,
             cov = covariance,
             invCov = covariance.inverse,
-            color = new Vector4(r, g, b, a),
-            gaussianType = 0
+
+            // Spherical Harmonics coefficents (This is a long block)
+            shCoefficient0 = shCoefficients[0],
+            shCoefficient1 = shCoefficients[1],
+            shCoefficient2 = shCoefficients[2],
+            shCoefficient3 = shCoefficients[3],
+            shCoefficient4 = shCoefficients[4],
+            shCoefficient5 = shCoefficients[5],
+            shCoefficient6 = shCoefficients[6],
+            shCoefficient7 = shCoefficients[7],
+            shCoefficient8 = shCoefficients[8],
+            shCoefficient9 = shCoefficients[9],
+            shCoefficient10 = shCoefficients[10],
+            shCoefficient11 = shCoefficients[11],
+            shCoefficient12 = shCoefficients[12],
+            shCoefficient13 = shCoefficients[13],
+            shCoefficient14 = shCoefficients[14],
+            shCoefficient15 = shCoefficients[15],
+            shCoefficient16 = shCoefficients[16],
+            shCoefficient17 = shCoefficients[17],
+            shCoefficient18 = shCoefficients[18],
+            shCoefficient19 = shCoefficients[19],
+            shCoefficient20 = shCoefficients[20],
+            shCoefficient21 = shCoefficients[21],
+            shCoefficient22 = shCoefficients[22],
+            shCoefficient23 = shCoefficients[23],
+            shCoefficient24 = shCoefficients[24],
+            shCoefficient25 = shCoefficients[25],
+            shCoefficient26 = shCoefficients[26],
+            shCoefficient27 = shCoefficients[27],
+            shCoefficient28 = shCoefficients[28],
+            shCoefficient29 = shCoefficients[29],
+            shCoefficient30 = shCoefficients[30],
+            shCoefficient31 = shCoefficients[31],
+            shCoefficient32 = shCoefficients[32],
+            shCoefficient33 = shCoefficients[33],
+            shCoefficient34 = shCoefficients[34],
+            shCoefficient35 = shCoefficients[35],
+            shCoefficient36 = shCoefficients[36],
+            shCoefficient37 = shCoefficients[37],
+            shCoefficient38 = shCoefficients[38],
+            shCoefficient39 = shCoefficients[39],
+            shCoefficient40 = shCoefficients[40],
+            shCoefficient41 = shCoefficients[41],
+            shCoefficient42 = shCoefficients[42],
+            shCoefficient43 = shCoefficients[43],
+            shCoefficient44 = shCoefficients[44]
         };
-
-        return p;
-    }
-
-
-    public static Gaussian3D CreateGaussian3D(float x, float y, float z, 
-        float xScale, float yScale, float zScale, 
-        float qX, float qY, float qZ, float qW, 
-        uint shCoefficientsNum, uint shCoefficientsIndex)
-    {
-        Matrix4x4 covariance = CreateCovarianceMatrix(xScale, yScale, zScale, qX, qY, qZ, qW);
-        Gaussian3D p = new()
-        {
-            pos = new Vector3(x, y, z),
-            cov = covariance,
-            invCov = covariance.inverse,
-            shCoefficientsNum = shCoefficientsNum,
-            shCoefficientsIndex = shCoefficientsIndex,
-            gaussianType = 1
-        };
-
-        return p;
-    }
-
-    public static Gaussian3D CreateRelightableGaussian3D(float x, float y, float z, 
-        float xScale, float yScale, float zScale, 
-        float qX, float qY, float qZ, float qW, float r, float g, float b, float a,
-        float nX, float nY, float nZ,
-        float roughness, float metalness, float specular,  float opacity, float ambientOcclusion, float refraction, float emissive) 
-    {
-        Matrix4x4 covariance = CreateCovarianceMatrix(xScale, yScale, zScale, qX, qY, qZ, qW);
-        Gaussian3D p = new();
-        p.pos = new Vector3(x, y, z);
-        p.cov = covariance;
-        p.invCov = covariance.inverse;
-        p.normal = new Vector3(nX, nY, nZ);
-        p.color = new Vector4(r, g, b, a);
-        p.roughness = roughness;
-        p.metalness = metalness;
-        p.specular = specular;
-        p.opacity = opacity;
-        p.ambientOcclusion = ambientOcclusion;
-        p.refraction = refraction;
-        p.emissive = emissive;
-        p.gaussianType = 2;
 
         return p;
     }
@@ -152,189 +175,112 @@ public class GaussianPlyParser
         coefficientsBuffer = new List<float>();
     }
 
-    // Parse a given number of simpleGaussian3Ds from the file 
-    private List<Gaussian3D> readSimpleGaussians(StreamReader sr, int numGaussians, ref int lineNumber){
-        // Parse the rest of the Gaussians
-        List<Gaussian3D> readGaussians = new List<Gaussian3D>();
-
-        int gaussiansRead = 0;
-
-        while(gaussiansRead < numGaussians){
-            string line = sr.ReadLine();
-            string[] splitLine = line.Split(" ");
-
-            // If this line isn't a comment
-            if(splitLine[0] != "comment"){
-                try{
-                    readGaussians.Add(CreateSimpleGaussian3D(
-                    float.Parse(splitLine[0]), float.Parse(splitLine[1]), float.Parse(splitLine[2]), 
-                    float.Parse(splitLine[3]), float.Parse(splitLine[4]), float.Parse(splitLine[5]), 
-                    float.Parse(splitLine[6]), float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]), 
-                    float.Parse(splitLine[10]), float.Parse(splitLine[11]), float.Parse(splitLine[12]), float.Parse(splitLine[13])));
-                }
-                catch(IndexOutOfRangeException e){
-                    throw new InvalidOperationException("Error: The entry on line " + lineNumber + " of " +
-                        pathToGaussianFile + "is not a valid simpleGaussian3D. Root Cause: " + e);
-                }
-
-                gaussiansRead += 1;
-            }
-
-            lineNumber += 1;
+    private static byte[] HandleEndianness(byte[] binaryValue, bool valIsLittleEndian){
+        if(BitConverter.IsLittleEndian && !valIsLittleEndian){
+            return binaryValue.Reverse().ToArray();
         }
-        return readGaussians;
+        else if(!BitConverter.IsLittleEndian && valIsLittleEndian){
+            return binaryValue.Reverse().ToArray();
+        }
+        else{
+            return binaryValue;
+        }
     }
 
-    // Parse a given number of gaussian3Ds from the file 
-    private List<Gaussian3D> readGaussians(StreamReader sr, int numGaussians, ref int lineNumber){
-        // Parse the rest of the Gaussians
-        List<Gaussian3D> readGaussians = new List<Gaussian3D>();
+    private static float ReadNextFloat(BinaryReader br, bool valIsLittleEndian){
+        byte[] currBytes = br.ReadBytes(4);
+        currBytes = HandleEndianness(currBytes, valIsLittleEndian);
 
-        int gaussiansRead = 0;
-
-        while(gaussiansRead < numGaussians){
-            string line = sr.ReadLine();
-            string[] splitLine = line.Split(" ");
-
-            // If this line isn't a comment
-            if(splitLine[0] != "comment"){
-                try{
-                    // Read in the given spherical harmonics coefficients
-                    uint numCoefficients = uint.Parse(splitLine[10]);
-                    uint coeffiecntLoc = (uint) coefficientsBuffer.Count;
-                    for(int i = 1; i <= numCoefficients; i++){
-                        coefficientsBuffer.Add(float.Parse(splitLine[10 + i]));
-                    }
-                    
-
-                    readGaussians.Add(CreateGaussian3D(
-                    float.Parse(splitLine[0]), float.Parse(splitLine[1]), float.Parse(splitLine[2]), 
-                    float.Parse(splitLine[3]), float.Parse(splitLine[4]), float.Parse(splitLine[5]), 
-                    float.Parse(splitLine[6]), float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]), 
-                    numCoefficients, coeffiecntLoc));
-                }
-                catch(IndexOutOfRangeException e){
-                    throw new InvalidOperationException("Error: The entry on line " + lineNumber + " of " +
-                        pathToGaussianFile + "is not a valid gaussian3D. Root Cause: " + e);
-                }
-
-                gaussiansRead += 1;
-            }
-
-            lineNumber += 1;
-        }
-        return readGaussians;
+        return BitConverter.ToSingle(currBytes);
     }
-
-    // Parse a given number of relightableGaussian3Ds from the file 
-    private List<Gaussian3D> readRelightableGaussians(StreamReader sr, int numGaussians, ref int lineNumber){
-        // Parse the rest of the Gaussians
-        List<Gaussian3D> readGaussians = new List<Gaussian3D>();
-
-        int gaussiansRead = 0;
-
-        while(gaussiansRead < numGaussians){
-            string line = sr.ReadLine();
-            string[] splitLine = line.Split(" ");
-
-            // If this line isn't a comment
-            if(splitLine[0] != "comment"){
-                try{
-                    readGaussians.Add(CreateRelightableGaussian3D(
-                    float.Parse(splitLine[0]), float.Parse(splitLine[1]), float.Parse(splitLine[2]), 
-                    float.Parse(splitLine[3]), float.Parse(splitLine[4]), float.Parse(splitLine[5]), 
-                    float.Parse(splitLine[6]), float.Parse(splitLine[7]), float.Parse(splitLine[8]), float.Parse(splitLine[9]), 
-                    float.Parse(splitLine[10]), float.Parse(splitLine[11]), float.Parse(splitLine[12]), float.Parse(splitLine[13]),
-                    float.Parse(splitLine[14]), float.Parse(splitLine[15]), float.Parse(splitLine[16]), 
-                    float.Parse(splitLine[17]), float.Parse(splitLine[18]), float.Parse(splitLine[19]), float.Parse(splitLine[20]),
-                    float.Parse(splitLine[21]), float.Parse(splitLine[22]), float.Parse(splitLine[23])));
-                }
-                catch(IndexOutOfRangeException e){
-                    throw new InvalidOperationException("Error: The entry on line " + lineNumber + " of " +
-                        pathToGaussianFile + "is not a valid relightableGaussian3D. Root Cause: " + e);
-                }
-
-                gaussiansRead += 1;
-            }
-
-            lineNumber += 1;
-        }
-        return readGaussians;
-    }
-
-
 
     // Parse the Gaussian file this parser is pointed at
     public Gaussian3D[] ReadFile(){
 
         using FileStream fs = File.OpenRead(pathToGaussianFile);
-        using StreamReader sr = new StreamReader(fs);
+        using BinaryReader binaryReader = new BinaryReader(fs);
 
-        // Read the header to find the number of Gaussians of each type in the file
-        Queue<string> typeOrder = new Queue<string>();
-        Queue<int> typeNumbers = new Queue<int>();
+        List<Gaussian3D> gaussians = new List<Gaussian3D>();
+
+        // Read the header 
+    
+        binaryReader.ReadBytes(11);
+
+        // Read file formnay 
+        string nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+        string fileFormat = "";
+        while(nextChar != " "){
+            fileFormat += nextChar;
+            nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+        }
+
+        // Set file format
+        bool isLittleEndian = fileFormat == "binary_little_endian";
+
+        binaryReader.ReadBytes(12);
+
+        // Read past element name
+        nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+        while(nextChar != " "){
+            nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+        }
+
+        // Read number of elements 
+        string numElementsStr = "";
+        nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+        while(nextChar != "\n"){
+            numElementsStr += nextChar;
+            nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+        }
+        int numElements = int.Parse(numElementsStr);
+
+        // Read through to the rest of the header
+        bool readingHeader = true;
+        string buffer = "";
+        while(readingHeader){
+            buffer += System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
+
+            if(buffer.Length >= 11){
+                readingHeader = !(buffer.Substring(buffer.Length - 11, 11) == "end_header\n");
+            }
+        }
         
-        int lineNumber = 1;
-        string line = sr.ReadLine();
-        while (line != "end header")
-        {
-            if(line == ""){
-                lineNumber += 1;
-                line = sr.ReadLine();
-                continue;
-            }
+        // Read every element 
+        for(int i =0; i < numElements; i++){
+            // Read position
+            Vector3 pos = new Vector3(ReadNextFloat(binaryReader, isLittleEndian), 
+                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian));
 
-            string[] splitLine = line.Split(" ");
+            // Read off normals (Aren't currently using them)
+            ReadNextFloat(binaryReader, isLittleEndian);
+            ReadNextFloat(binaryReader, isLittleEndian);
+            ReadNextFloat(binaryReader, isLittleEndian);
             
-            // If this line is the start the description for the simpleGaussian3D type get the number of simple gaussians
-            if(splitLine[0] == "element" && splitLine[1] == "simpleGaussian3D"){
-                typeOrder.Enqueue("simpleGaussian3D");
-                typeNumbers.Enqueue(int.Parse(splitLine[2]));
-            }
-            // If this line is the start the description for the gaussian3D type get the number of gaussians
-            else if (splitLine[0] == "element" && splitLine[1] == "gaussian3D")
-            {
-                typeOrder.Enqueue("gaussian3D");
-                typeNumbers.Enqueue(int.Parse(splitLine[2]));
-            }
-            // If this line is the start the description for the relightableGaussian3D type get the number of 
-            // relightable gaussians
-            else if (splitLine[0] == "element" && splitLine[1] == "relightableGaussian3D")
-            {
-                typeOrder.Enqueue("relightableGaussian3D");
-                typeNumbers.Enqueue(int.Parse(splitLine[2]));
+            Vector4 color = new Vector4(ReadNextFloat(binaryReader, isLittleEndian), 
+                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian), 1);
+
+            // Read spherical harmonics coefficients
+            float[] shCoefficients = new float[45];
+            for(int j =0; j < 45; j++){
+                shCoefficients[j] = ReadNextFloat(binaryReader, isLittleEndian);
             }
 
-            lineNumber += 1; 
-            line = sr.ReadLine();
+            // Read off opacity
+            ReadNextFloat(binaryReader, isLittleEndian);
+
+            // Read in scale and rotation
+            Vector3 scale = new Vector3(ReadNextFloat(binaryReader, isLittleEndian), 
+                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian));
+            Quaternion rot = new Quaternion(ReadNextFloat(binaryReader, isLittleEndian), 
+                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian));
+
+        
+            Gaussian3D g = CreateGaussian3D(pos, color, scale, rot, shCoefficients);
+
+            gaussians.Add(g);
         }
 
-        // If the header does not contain the line `gaussian3D {number of gaussians in the file here}`
-        // Thrown an exception
-        if(typeNumbers.Count == 0){
-            throw new InvalidOperationException("Error: Failed to read in file located at " + pathToGaussianFile +
-                ". The files header does not specify a number of gaussian3d elements to read in,");
-        }
-
-        // Get all specified gaussians
-        List<Gaussian3D> allGaussians = new List<Gaussian3D>();
-        // TODO: If other elements are specified before the gaussians skip past them.
-        while(typeOrder.Count > 0){
-            string currType = typeOrder.Dequeue();
-            int numGaussians = typeNumbers.Dequeue();
-
-            if(currType == "simpleGaussian3D"){
-                allGaussians.AddRange(readSimpleGaussians(sr, numGaussians, ref lineNumber));
-            }
-            else if(currType == "gaussian3D"){
-                allGaussians.AddRange(readGaussians(sr, numGaussians, ref lineNumber));
-            }
-            else{
-                allGaussians.AddRange(readRelightableGaussians(sr, numGaussians, ref lineNumber));
-            }
-        }
-
-        return allGaussians.ToArray();
+        return gaussians.ToArray();
     }
 
     // Read in a Gaussian .ply file and return its results as Gaussian3D objects

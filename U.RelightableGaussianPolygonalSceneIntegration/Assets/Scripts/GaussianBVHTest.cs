@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 public class GaussianBVHTest : MonoBehaviour
@@ -30,6 +31,7 @@ public class GaussianBVHTest : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        
         Gaussian3D[] gaussians = GaussianPlyParser.ReadGaussianFile(GaussianScrpt.FilePath);
         List<AABB> aabbs = new List<AABB>();
 
@@ -39,7 +41,10 @@ public class GaussianBVHTest : MonoBehaviour
 
         //ExploreGaussians(aabbs, ref foundGaussians, (int) rootNode, gaussians);
 
-        Debug.Log(foundGaussians.Count);
+        //Debug.Log(foundGaussians.Count);
+        
+
+        Debug.Log(Marshal.SizeOf(typeof(Gaussian3D)));
        
     }
 
