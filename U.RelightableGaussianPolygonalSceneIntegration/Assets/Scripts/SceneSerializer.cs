@@ -151,15 +151,20 @@ public class SceneSerializer : MonoBehaviour
         foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
         {
             Gaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
+            
+            GameObjectData currGameObj = new GameObjectData();
+            Transform transform = gaussianScrpt.gameObject.transform;
+            currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
+            currGameObj.worldToObject = transform.worldToLocalMatrix;
+            // Make BVH for Gaussians 
+            uint rootIdx = BuildBVH.BuildBVHForGaussians(gaussiansTmp, ref aabbs, gaussians.Count);
+
+            currGameObj.aabbRootIndex = rootIdx;
+            gameObjectDatas.Add(currGameObj);
+
+
             foreach (Gaussian3D g in gaussiansTmp)
-            {
-                GameObjectData currGameObj = new GameObjectData();
-                Transform transform = gaussianScrpt.gameObject.transform;
-                currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
-                currGameObj.worldToObject = transform.worldToLocalMatrix;
-                currGameObj.aabbRootIndex = (uint)aabbs.Count;
-                gameObjectDatas.Add(currGameObj);
-                
+            {   
                 /*
                 AABB aabb = new AABB();
                 aabb.primitiveType = PrimType.Gaussian;
@@ -170,8 +175,7 @@ public class SceneSerializer : MonoBehaviour
 
                 gaussians.Add(g);
             }
-            // Make BVH for Gaussians 
-            BuildBVH.BuildBVHForGaussians(gaussians, ref aabbs);
+
         }
         
         if (gaussians.Count > 0)

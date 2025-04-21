@@ -136,6 +136,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
             if (rayAABBIntersect(pathOriginObjSpace, pathDirObjSpace, aabb))
             {
+
                 // leaf node intersection
                 if(aabb.primitiveCount < 4294967295U)
                 {
@@ -174,71 +175,77 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                             }
                         }
 
-                        break;
                     }
+                    else{
 
-                    // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-                    for (uint j = 0; j < aabb.primitiveCount; j++)
-                    {
-                        Triangle tri = triangles[aabb.primitiveStartIndex + j];
-
-                        float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
-                        float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
-                        float3 p = cross(pathDirObjSpace, aToC);
-
-                        float det  = dot(p, aToB);
-                        if (det < EPSILON)
+                        // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+                        for (uint j = 0; j < aabb.primitiveCount; j++)
                         {
-                            continue;
-                        }
+                            Triangle tri = triangles[aabb.primitiveStartIndex + j];
 
-                        float invDet = rcp(det);
+                            float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
+                            float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
+                            float3 p = cross(pathDirObjSpace, aToC);
 
-                        float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
-                        float u = dot(p, aToOrigin) * invDet;
-                        if (u < 0 || u > 1)
-                        {
-                            continue; 
-                        }
-
-                        float3 q = cross(aToOrigin, aToB);
-                        float v = dot(q, pathDirObjSpace) * invDet;
-                        if (v < 0 || u + v > 1)
-                        {
-                            continue;
-                        }
-
-                        float t = dot(q, aToC) * invDet;
-                        
-                        if (t > 0)
-                        {
-                            tmpHit.t = t;
-
-                            MaterialData mat = materialDatas[currGameObj.materialIndex];
-                            tmpHit.materialType = mat.type;
-
-                            float w = 1 - u - v;
-                            if (mat.type != MATERIAL_TEXTURED)
+                            float det  = dot(p, aToB);
+                            if (det < EPSILON)
                             {
-                                tmpHit.albedo = mat.albedo;
-                            }
-                            else
-                            {
-                                float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
-                                tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
+                                continue;
                             }
 
-                            float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
-                            tmpHit.normal = normalize(normal.xyz);
+                            float invDet = rcp(det);
 
-                            insertionSortAndCull(id.x, hitCount, tmpHit);
+                            float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
+                            float u = dot(p, aToOrigin) * invDet;
+                            if (u < 0 || u > 1)
+                            {
+                                continue; 
+                            }
+
+                            float3 q = cross(aToOrigin, aToB);
+                            float v = dot(q, pathDirObjSpace) * invDet;
+                            if (v < 0 || u + v > 1)
+                            {
+                                continue;
+                            }
+
+                            float t = dot(q, aToC) * invDet;
+                            
+                            if (t > 0)
+                            {
+                                tmpHit.t = t;
+
+                                MaterialData mat = materialDatas[currGameObj.materialIndex];
+                                tmpHit.materialType = mat.type;
+
+                                float w = 1 - u - v;
+                                if (mat.type != MATERIAL_TEXTURED)
+                                {
+                                    tmpHit.albedo = mat.albedo;
+                                }
+                                else
+                                {
+                                    float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
+                                    tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
+                                }
+
+                                float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
+                                tmpHit.normal = normalize(normal.xyz);
+
+                                insertionSortAndCull(id.x, hitCount, tmpHit);
+                            }
                         }
                     }
+
+
                 }
                 else
                 {
                     stackPush(stackSize, id.x, aabb.leftChildIndex);
-                    stackPush(stackSize, id.x, aabb.rightChildIndex);
+                    // If this AABB has a right child
+                    if(aabb.rightChildIndex < 4294967295U){
+                        stackPush(stackSize, id.x, aabb.rightChildIndex);
+                    }
                 }
             }
         }

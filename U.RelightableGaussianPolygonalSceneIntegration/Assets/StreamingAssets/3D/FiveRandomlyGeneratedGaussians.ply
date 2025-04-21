@@ -1,6 +1,6 @@
 ply
 format ascii 1.0
-element simpleGaussian3D 3
+element simpleGaussian3D 5
 comment Coordinates in world space for the center of this Gaussians
 property float x
 property float y
@@ -21,6 +21,8 @@ property float g
 property float b
 property float a
 end header
-1 1 5 0.75 0.75 2 0 0 0 0 1 0 0 1
--1 0 7 0.75 0.75 2 0 0 0 0 0 1 0 1
-2 0 7 0.75 0.75 2 0 0 0 0 0 1 0 1
+-0.02 0.27 0.48 0.45 0.22 0.06 0.6 0.95 0.92 0.57 0.73 0.5 0.7 1
+-0.2 0.0 0.14 0.17 0.45 0.23 0.38 0.4 0.68 0.6 0.48 0.4 0.57 1
+0.48 -0.03 0.29 0.41 0.12 0.2 0.41 0.89 0.71 0.6 0.08 0.54 0.48 1
+0.07 -0.16 -0.17 0.07 0.02 0.19 0.91 0.7 0.27 0.51 0.54 0.44 0.85 1
+0.19 -0.38 -0.2 0.16 0.38 0.13 0.21 0.63 0.27 0.29 0.73 0.45 0.78 1

@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System;
 
 public class HybridGaussianRenderer : MonoBehaviour
 {
@@ -37,6 +38,7 @@ public class HybridGaussianRenderer : MonoBehaviour
     private ComputeBuffer sortedHitsBuffer;
     private MeshRenderer[] meshRenderers;
     private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
+    private int numPaths;
 
     private void Awake()
     {
@@ -68,6 +70,7 @@ public class HybridGaussianRenderer : MonoBehaviour
         frameIndex.SetData(new uint[]{0});
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
+        numPaths = pathCount;
         paths = new ComputeBuffer(pathCount,  Marshal.SizeOf(typeof(PathPayload)));
         pathHitRecords = new ComputeBuffer(pathCount, Marshal.SizeOf(typeof(PathHitRecord)));
         pathsContinueCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);
@@ -186,6 +189,9 @@ public class HybridGaussianRenderer : MonoBehaviour
         // {
         //     SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
         // }
+        
+        
+
     }
 
     private void OnDestroy()
