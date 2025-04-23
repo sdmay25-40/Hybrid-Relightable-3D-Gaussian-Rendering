@@ -19,9 +19,14 @@ This repository contains the official implementation of our senior design projec
 ## Prerequisites before use: 
 ### Software Requirements:
 ```
-    Must have Unity installed on your computer.
     Must have Python 3.10+
-    Must have the Colmap libary installed 
+    Must have the plyfile libary installed 
+    Must have the ipython libary installed 
+    Must have the torch libary installed 
+
+    Must have Unity installed on your computer.
+      This to generating the 3D Gaussians, rendering does not require this. 
+
 ```
 ### Hardware Requirements:
 ```
@@ -29,45 +34,50 @@ This repository contains the official implementation of our senior design projec
 ```
 
 
-
 ## Installation
-
 ### 1. Install Python
-Follow your OS instructions or [download Python 3.10+ from the official site](https://www.python.org/downloads/).  
-Add Python to PATH during installation.
+Follow these [instructions](https://phoenixnap.com/kb/how-to-install-python-3-windows) for Windows.  
+
+Follow these [instructions](https://phoenixnap.com/kb/install-python-mac)  for Mac.  
+
+1. Download Python Executable Installer
+1. Run Executable Installer
+1. Add Python to PATH during installation
+1. Verify Python Is Installed on Windows
+1. Verify pip is Installed on Windows
 
 
 ### 2. Install Colmapy
 Run this command in your terminal.
 ```
-pip install pycolmap
+pip install pycolmap 
 ```
 This creates a python binding to use with your project. 
 
-### 3. Install BLANK
-Are there anything else we need to install
+### 3. Install AI dependencies
+Run this command in your terminal.
+```
+pip install plyfile ipython torch
+```
+This will install all the needed AI libary dependencies for this project. 
+
 
 ---
 
 
 ## Pipeline Overview
 
-
 ```
-graph TD
 A[Video] --> B[COLMAP SfM + MVS]
 B --> C[Initial Point Cloud]
 C --> D[Gaussian Scene Optimization (PyTorch)]
 D --> E1[Unity Ray Tracer]
 
 ```
-
-
 ---
 
 
 ## Features
-
 
 -  Convert video into a full 3D scene
 -  Relightable Gaussian-based scene rendering
@@ -77,25 +87,33 @@ D --> E1[Unity Ray Tracer]
 
 ---
 ## File Structure
-//Picture of our file Structure
+```
+Assets/
+└── Hybrid Relightable 3D Gaussian Rendering/        
+    ├── Scripts/
+    ├── Prefabs/
+    ├── Materials/
+    ├── Textures/
+    ├── Scenes/
+    └── Documentation/
+```
+
 
 ## Usage
 
-```
-1) Start a new Unity project
-2) Add our project as a Unity Asset from the Unity Asset Store. There is a link below. 
-1) Take the video files you desire to turn into a 3D model and drag them to the BLANK folder in the unity project folder.
-3) Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the BLANK folder. 
-4) ANY Other instructions for Running our project.
-```
-Link for our project in the [Unity Asset Store](Stuff)
+1. Start a new Unity project
+1. Add our project as a Unity Asset from the [Unity Asset Store.](Stuff)
+1. Take the video files you desire to turn into a 3D model and drag them to the BLANK folder in the unity project folder.
+1. Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the BLANK folder. 
+1. ANY Other instructions for Running our project.
+
 
 ## Known Issues
+
 The runtime of generateing a 3D model make take a while due to your computer hardware and the length of your viedo. 
 
 
 ## BibTeX
-
 
 ```bibtex
 @misc{team40_gaussian_2025,
@@ -105,16 +123,15 @@ The runtime of generateing a 3D model make take a while due to your computer har
   note={Iowa State University Senior Design Project}
 }
 ```
-
-
 ---
 
 
 ## Acknowledgements
 
-
-Special thanks to Dr. Mitra for guidance, the ECE Department at Iowa State University, and the authors of [3D Gaussian Splatting (Kerbl et al.)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) for inspiration.
+Special thanks to Dr. Mitra for guidance, the ECE Department at Iowa State University, and the authors of [3D Gaussian Splatting (Kerbl et al.)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [3D Gaussian Ray Tracing](https://gaussiantracer.github.io/#supp_video) and [Relightable 3D Gaussian](https://nju-3dv.github.io/projects/Relightable3DGaussian/) for inspiration.
 
 <a href="https://www.ece.iastate.edu/"><img height="200" src="ISUECE.jpg" style="margin-right: 100px;"></a>
 <a href="https://www.iastate.edu/"><img height="200" src="ISULogo.png"></a>
 ---
+
+
