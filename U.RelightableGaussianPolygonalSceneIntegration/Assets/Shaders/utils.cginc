@@ -90,7 +90,7 @@ struct Gaussian
     float4x4 cov;
     float4x4 invCov;
     float4 color;
-    float shCoefficients[45];
+    float shCoefficients[27];
 };
 
 /// <summary> Converts pathId to pixelcoordinates (x,y) </summary>

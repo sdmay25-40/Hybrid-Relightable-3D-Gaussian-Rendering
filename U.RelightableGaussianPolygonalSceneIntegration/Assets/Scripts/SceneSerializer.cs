@@ -158,7 +158,7 @@ public class SceneSerializer : MonoBehaviour
             currGameObj.worldToObject = transform.worldToLocalMatrix;
             // Make BVH for Gaussians 
             uint rootIdx = BuildBVH.BuildBVHForGaussians(gaussiansTmp, ref aabbs, gaussians.Count);
-
+            
             currGameObj.aabbRootIndex = rootIdx;
             gameObjectDatas.Add(currGameObj);
 

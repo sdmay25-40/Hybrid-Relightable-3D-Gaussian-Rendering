@@ -6,12 +6,34 @@ using UnityEngine;
 using System;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
+using Unity.Jobs;
+using Unity.Collections;
+using System.Linq;
 
 public static class BuildBVH 
 {   
     private const float COST_TRAV = 1;
     private const float COST_ITRSCT = 2;
     private const float NUM_DIVISIONS = 8;
+
+    public struct BoundingBoxCalcJob : IJobParallelFor
+    {
+        [ReadOnly]
+        public int bufferIdx;
+        [ReadOnly]
+        public NativeArray<Gaussian3D> gaussians;
+        [ReadOnly]
+        public NativeArray<int> idxsTreeOrder;
+
+
+        public NativeArray<AABB> result;
+
+        public void Execute(int index)
+        {
+            int idx = bufferIdx + idxsTreeOrder[index];
+            result[index] = CreateAABBForGaussian(gaussians[idx], (uint) (idx + bufferIdx));
+        }
+    }
 
     /// <summary>
     /// Calculate the total area of an Axis Aligned Bounding Box
@@ -330,7 +352,7 @@ public static class BuildBVH
         aabb.primitiveType = PrimType.Gaussian;
 
 
-        /* Algorithm: Find standard deviation for each dimension * it by 1 + % of data to capute.
+        /* Algorithm: Find standard deviation for each dimension * it by 1 + % of data to capture.
         Then use that to find min/max
         */   
         Matrix<float> covAsMathNetMatrix = ConvertCovMatrixToMathNetMatrix(gaussian.cov);
@@ -371,13 +393,39 @@ public static class BuildBVH
 
     private static void BuildAABBsFromTree(MortonPayload[] mortonCodeTree, ref List<AABB> aabbs, 
         Gaussian3D[] gaussians, int gaussianBufferIdx){
+
+        NativeArray<Gaussian3D> gaussiansNative = new NativeArray<Gaussian3D>(gaussians.Length, 
+            Allocator.Persistent);
+        NativeArray<int> idxsTreeOrder = new NativeArray<int>(mortonCodeTree.Length,
+            Allocator.Persistent); 
+        NativeArray<AABB> aabbsNative = new NativeArray<AABB>(gaussians.Length, 
+            Allocator.Persistent);
+
+        gaussiansNative.CopyFrom(gaussians);
+
+        for(int i = 0; i < mortonCodeTree.Length; i++){
+            idxsTreeOrder[i] = mortonCodeTree[i].gaussianIdx;
+        }
+
         // Create AABBs for every gaussian primitive
         int lastLayerStartIndex = aabbs.Count;
-        int lastLayerCount = 0;
-        foreach(MortonPayload mortonCode in mortonCodeTree){
-            aabbs.Add(CreateAABBForGaussian(gaussians[mortonCode.gaussianIdx], (uint) (mortonCode.gaussianIdx + gaussianBufferIdx)));
-            lastLayerCount++;
+        int lastLayerCount = gaussians.Length;
+        BoundingBoxCalcJob job = new BoundingBoxCalcJob(){
+            bufferIdx = gaussianBufferIdx,
+            gaussians = gaussiansNative,
+            idxsTreeOrder = idxsTreeOrder,
+            result = aabbsNative
+        };
+
+        JobHandle jh = job.Schedule(gaussians.Length, 16);
+        jh.Complete();
+
+        foreach(AABB x in aabbsNative){
+            aabbs.Add(x);
         }
+        gaussiansNative.Dispose();
+        idxsTreeOrder.Dispose();
+        aabbsNative.Dispose();
 
         // Build BVH from AABBs
         while(lastLayerCount > 1){
@@ -408,6 +456,7 @@ public static class BuildBVH
 
             lastLayerStartIndex = thisLayerStartIndex;
             lastLayerCount = thisLayerCount;
+
         }
         
     }

@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using MathNet.Numerics.LinearAlgebra;
-using Unity.VisualScripting;
-using UnityEditor.PackageManager;
 using UnityEngine;
 
 
@@ -27,6 +24,7 @@ public struct Gaussian3D{
     public Vector3 pos;
     public Matrix4x4 cov;
     public Matrix4x4 invCov;
+    // This is composed of shCoefficient0, shCoefficient9, and shCoefficient18
     public Vector4 color;
         
     // Spherical Harmonics Coefficients
@@ -57,27 +55,13 @@ public struct Gaussian3D{
     public float shCoefficient24;
     public float shCoefficient25;
     public float shCoefficient26;
-    public float shCoefficient27;
-    public float shCoefficient28;
-    public float shCoefficient29;
-    public float shCoefficient30;
-    public float shCoefficient31;
-    public float shCoefficient32;
-    public float shCoefficient33;
-    public float shCoefficient34;
-    public float shCoefficient35;
-    public float shCoefficient36;
-    public float shCoefficient37;
-    public float shCoefficient38;
-    public float shCoefficient39;
-    public float shCoefficient40;
-    public float shCoefficient41;
-    public float shCoefficient42;
-    public float shCoefficient43;
-    public float shCoefficient44;
 }
 
-
+public enum PlyFileFormat {
+    BINARY_LITTLE_ENDIAN,
+    BINARY_BIG_ENDIAN,
+    ASCII
+}
 
 // Object which can be used to parse a Gaussian .ply file and return the retrieved Gaussians
 public class GaussianPlyParser 
@@ -131,25 +115,7 @@ public class GaussianPlyParser
             shCoefficient23 = shCoefficients[23],
             shCoefficient24 = shCoefficients[24],
             shCoefficient25 = shCoefficients[25],
-            shCoefficient26 = shCoefficients[26],
-            shCoefficient27 = shCoefficients[27],
-            shCoefficient28 = shCoefficients[28],
-            shCoefficient29 = shCoefficients[29],
-            shCoefficient30 = shCoefficients[30],
-            shCoefficient31 = shCoefficients[31],
-            shCoefficient32 = shCoefficients[32],
-            shCoefficient33 = shCoefficients[33],
-            shCoefficient34 = shCoefficients[34],
-            shCoefficient35 = shCoefficients[35],
-            shCoefficient36 = shCoefficients[36],
-            shCoefficient37 = shCoefficients[37],
-            shCoefficient38 = shCoefficients[38],
-            shCoefficient39 = shCoefficients[39],
-            shCoefficient40 = shCoefficients[40],
-            shCoefficient41 = shCoefficients[41],
-            shCoefficient42 = shCoefficients[42],
-            shCoefficient43 = shCoefficients[43],
-            shCoefficient44 = shCoefficients[44]
+            shCoefficient26 = shCoefficients[26]
         };
 
         return p;
@@ -175,11 +141,11 @@ public class GaussianPlyParser
         coefficientsBuffer = new List<float>();
     }
 
-    private static byte[] HandleEndianness(byte[] binaryValue, bool valIsLittleEndian){
-        if(BitConverter.IsLittleEndian && !valIsLittleEndian){
+    private static byte[] HandleEndianness(byte[] binaryValue, PlyFileFormat fileFormat){
+        if(BitConverter.IsLittleEndian && fileFormat == PlyFileFormat.BINARY_BIG_ENDIAN){
             return binaryValue.Reverse().ToArray();
         }
-        else if(!BitConverter.IsLittleEndian && valIsLittleEndian){
+        else if(!BitConverter.IsLittleEndian && fileFormat == PlyFileFormat.BINARY_LITTLE_ENDIAN){
             return binaryValue.Reverse().ToArray();
         }
         else{
@@ -187,13 +153,17 @@ public class GaussianPlyParser
         }
     }
 
-    private static float ReadNextFloat(BinaryReader br, bool valIsLittleEndian){
+    private static float ReadNextFloat(BinaryReader br, PlyFileFormat fileFormat){
         byte[] currBytes = br.ReadBytes(4);
-        currBytes = HandleEndianness(currBytes, valIsLittleEndian);
+        currBytes = HandleEndianness(currBytes, fileFormat);
 
         return BitConverter.ToSingle(currBytes);
     }
 
+
+
+    //private static void ReadHeader(FileStream fs, ref )
+    
     // Parse the Gaussian file this parser is pointed at
     public Gaussian3D[] ReadFile(){
 
@@ -208,14 +178,14 @@ public class GaussianPlyParser
 
         // Read file formnay 
         string nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
-        string fileFormat = "";
+        string fileFormatStr = "";
         while(nextChar != " "){
-            fileFormat += nextChar;
+            fileFormatStr += nextChar;
             nextChar = System.Text.Encoding.ASCII.GetString(binaryReader.ReadBytes(1));
         }
 
         // Set file format
-        bool isLittleEndian = fileFormat == "binary_little_endian";
+        PlyFileFormat fileFormat = fileFormatStr == "binary_little_endian" ? PlyFileFormat.BINARY_LITTLE_ENDIAN : PlyFileFormat.BINARY_BIG_ENDIAN;
 
         binaryReader.ReadBytes(12);
 
@@ -247,35 +217,36 @@ public class GaussianPlyParser
         
         // Read every element 
         for(int i =0; i < numElements; i++){
+
             // Read position
-            Vector3 pos = new Vector3(ReadNextFloat(binaryReader, isLittleEndian), 
-                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian));
+            Vector3 pos = new Vector3(ReadNextFloat(binaryReader, fileFormat), 
+                ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat));
 
             // Read off normals (Aren't currently using them)
-            ReadNextFloat(binaryReader, isLittleEndian);
-            ReadNextFloat(binaryReader, isLittleEndian);
-            ReadNextFloat(binaryReader, isLittleEndian);
+            /*
+            ReadNextFloat(binaryReader, fileFormat);
+            ReadNextFloat(binaryReader, fileFormat);
+            ReadNextFloat(binaryReader, fileFormat);
+            */
             
-            Vector4 color = new Vector4(ReadNextFloat(binaryReader, isLittleEndian), 
-                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian), 1);
+            //Vector4 color = new Vector4(ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), 1);
 
             // Read spherical harmonics coefficients
             float[] shCoefficients = new float[45];
-            for(int j =0; j < 45; j++){
-                shCoefficients[j] = ReadNextFloat(binaryReader, isLittleEndian);
+            for(int j =0; j < 27; j++){
+                shCoefficients[j] = ReadNextFloat(binaryReader, fileFormat);
             }
 
-            // Read off opacity
-            ReadNextFloat(binaryReader, isLittleEndian);
-
             // Read in scale and rotation
-            Vector3 scale = new Vector3(ReadNextFloat(binaryReader, isLittleEndian), 
-                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian));
-            Quaternion rot = new Quaternion(ReadNextFloat(binaryReader, isLittleEndian), 
-                ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian), ReadNextFloat(binaryReader, isLittleEndian));
+            Vector3 scale = new Vector3(ReadNextFloat(binaryReader, fileFormat), 
+                ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat));
+            //Quaternion rot = new Quaternion(ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat));
 
+            Vector4 color = new Vector4(shCoefficients[0], shCoefficients[9], shCoefficients[18], 1);
+            // Read off opacity
+            ReadNextFloat(binaryReader, fileFormat);
         
-            Gaussian3D g = CreateGaussian3D(pos, color, scale, rot, shCoefficients);
+            Gaussian3D g = CreateGaussian3D(pos, color, scale, new Quaternion(0, 0, 0, 0), shCoefficients);
 
             gaussians.Add(g);
         }
