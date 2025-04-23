@@ -1,15 +1,11 @@
 
-# Hybrid Relightable 3D Gaussian Rendering  
+# Hybrid Relightable 3D Gaussian Rendering README  
 Team 40 – Senior Design May 2025  
 Jackson Vanderheyden (Graphics Scope Manager), Brian Xicon (Machine Learning Scope Manager), Luke Broglio (Schedule Manager), Ethan Gasner (Documentation Manager), Kyle Kohl (Communication Manager), <br>  
-| Project Page [https://sdmay25-40.sd.ece.iastate.edu/](#) | [Demo Video (coming soon)](#) | [Final Report (coming soon)](#) | [Unity Plugin (WIP)](#) |<br>  
-![Teaser](assets/teaser.png)
-
+| [Project Page](https://sdmay25-40.sd.ece.iastate.edu/)| [Demo Video (coming soon)](#) | [Final Report (coming soon)](#) | [Unity Plugin (WIP)](#) |<br>  
+![Teaser](CornellBox.png)
 
 This repository contains the official implementation of our senior design project **Hybrid Relightable 3D Gaussian Rendering**, which enables high-quality 3D models to be reconstructed from video using AI. Our system converts video into realistic, relightable 3D Gaussian models that can be seamlessly used within the Unity Game Engine. Users can place and transform these models alongside Unity-supported objects, enabling intuitive scene authoring.
-
-<a href="https://git.ece.iastate.edu/sd/sdmay25-40/"><img height="100" src="assets/logo_isu_ece.png"></a>
-<a href="https://www.iastate.edu/"><img height="100" src="assets/logo_isu.png"></a>
 
 
 ---
@@ -20,47 +16,36 @@ This repository contains the official implementation of our senior design projec
 
 
 ---
-##Prerequisites before use: 
-#Software Requirements:
+## Prerequisites before use: 
+### Software Requirements:
+```
     Must have Unity installed on your computer.
     Must have Python 3.10+
     Must have the Colmap libary installed 
-#Hardware Requirements:
+```
+### Hardware Requirements:
+```
     Must have an Nvidia's graphics card in your computer.
-
+```
 
 
 
 ## Installation
-
-
-
 
 ### 1. Install Python
 Follow your OS instructions or [download Python 3.10+ from the official site](https://www.python.org/downloads/).  
 Add Python to PATH during installation.
 
 
-### 2. Clone the Repository
-```bash
-git clone https://github.com/your-org/hybrid-gaussian-rendering.git
-cd hybrid-gaussian-rendering
+### 2. Install Colmapy
+Run this command in your terminal.
 ```
-
-
-### 3. Create and Activate a Virtual Environment
-```bash
-python -m venv env
-source env/bin/activate      # On Linux/Mac
-env\Scripts\activate         # On Windows
+pip install pycolmap
 ```
+This creates a python binding to use with your project. 
 
-
-### 4. Install Requirements
-```bash
-pip install -r requirements.txt
-```
-
+### 3. Install BLANK
+Are there anything else we need to install
 
 ---
 
@@ -68,9 +53,9 @@ pip install -r requirements.txt
 ## Pipeline Overview
 
 
-```mermaid
+```
 graph TD
-A[Smartphone Video] --> B[COLMAP SfM + MVS]
+A[Video] --> B[COLMAP SfM + MVS]
 B --> C[Initial Point Cloud]
 C --> D[Gaussian Scene Optimization (PyTorch)]
 D --> E1[Unity Ray Tracer]
@@ -95,13 +80,18 @@ D --> E1[Unity Ray Tracer]
 //Picture of our file Structure
 
 ## Usage
-#1) Take the video files you desire to turn into a 3D model.
-#2) Drag them to the BLANK folder in the unity project folder.
-#3) Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the BLANK folder. 
-ANY Other instructions for Running our project.
 
+```
+1) Start a new Unity project
+2) Add our project as a Unity Asset from the Unity Asset Store. There is a link below. 
+1) Take the video files you desire to turn into a 3D model and drag them to the BLANK folder in the unity project folder.
+3) Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the BLANK folder. 
+4) ANY Other instructions for Running our project.
+```
+Link for our project in the [Unity Asset Store](Stuff)
 
-
+## Known Issues
+The runtime of generateing a 3D model make take a while due to your computer hardware and the length of your viedo. 
 
 
 ## BibTeX
@@ -125,5 +115,6 @@ ANY Other instructions for Running our project.
 
 Special thanks to Dr. Mitra for guidance, the ECE Department at Iowa State University, and the authors of [3D Gaussian Splatting (Kerbl et al.)](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) for inspiration.
 
-
+<a href="https://www.ece.iastate.edu/"><img height="200" src="ISUECE.jpg" style="margin-right: 100px;"></a>
+<a href="https://www.iastate.edu/"><img height="200" src="ISULogo.png"></a>
 ---
