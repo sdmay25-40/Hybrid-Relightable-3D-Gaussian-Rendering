@@ -110,7 +110,7 @@ Assets/
 
 ## Known Issues
 
-The runtime of generateing a 3D model make take a while due to your computer hardware and the length of your viedo. 
+The runtime of generating a 3D model make take a while due to your computer hardware and the length of your viedo. 
 
 
 ## BibTeX
