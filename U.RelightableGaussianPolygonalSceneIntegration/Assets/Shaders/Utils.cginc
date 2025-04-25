@@ -99,6 +99,7 @@ struct Gaussian
     float4x4 invCov;
     float4 color;
     float shCoefficients[27];
+    float2 padding;
 };
 
 uint getLinearPixelIndex(uint2 id, int screenWidth)

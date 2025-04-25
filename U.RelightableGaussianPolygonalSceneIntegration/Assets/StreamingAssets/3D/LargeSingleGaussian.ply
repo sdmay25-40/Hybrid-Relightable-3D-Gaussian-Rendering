@@ -1,26 +1,39 @@
 ply
 format ascii 1.0
-element simpleGaussian3D 3
-comment Coordinates in world space for the center of this Gaussians
+element vertex 1
 property float x
 property float y
 property float z
-comment Values used to construct a scale matrix for this gaussian
-property float xScale
-property float yScale
-property float zScale
-comment Quaternion values used to construct a rotation matrix for this gaussian
-property float qX
-property float qY
-property float qZ
-property float qW
-comment These two matrices togther can be used to create the covariance
-comment Color value of this Gaussian
-property float r
-property float g
-property float b
-property float a
-end header
-1 1 5 0.75 0.75 2 0 0 0 0 1 0 0 1
--1 0 7 0.75 0.75 2 0 0 0 0 0 1 0 1
-2 0 7 0.75 0.75 2 0 0 0 0 0 1 0 1
+property float f0
+property float f1
+property float f2
+property float f3
+property float f4
+property float f5
+property float f6
+property float f7
+property float f8
+property float f9
+property float f10
+property float f11
+property float f12
+property float f13
+property float f14
+property float f15
+property float f16
+property float f17
+property float f18
+property float f19
+property float f20
+property float f21
+property float f22
+property float f23
+property float f24
+property float f25
+property float f26
+property float scale_x
+property float scale_y
+property float scale_z
+property float opacity
+end_header
+0 0 0 3.544 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.75 0.75 1 1

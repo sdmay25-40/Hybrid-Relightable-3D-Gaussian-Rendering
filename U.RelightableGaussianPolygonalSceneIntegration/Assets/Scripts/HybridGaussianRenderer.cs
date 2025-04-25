@@ -44,6 +44,7 @@ public class HybridGaussianRenderer : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log(Marshal.SizeOf(typeof(Gaussian3D)));
         // disable camera's rendering
         if (cam == null)
         { 

@@ -55,6 +55,7 @@ public struct Gaussian3D{
     public float shCoefficient24;
     public float shCoefficient25;
     public float shCoefficient26;
+    public Vector2 padding;
 }
 
 public enum PlyFileFormat {
