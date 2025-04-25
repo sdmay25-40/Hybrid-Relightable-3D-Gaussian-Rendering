@@ -5,14 +5,16 @@
 #define EULER_NUM 2.71828
 #define PRIM_TYPE_TRIANGLE 0
 #define PRIM_TYPE_GAUSSIAN 1
-#define MATERIAL_DIFFUSE 0
-#define MATERIAL_EMISSIVE 1
-#define MATERIAL_TEXTURED 2
+#define MATERIAL_IS_EMISSIVE 1
+#define MATERIAL_HAS_ALBEDO_TEX 1u << 1
+#define MATERIAL_HAS_NORMAL_TEX 1u << 2
+#define MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX 1u << 3
 #define STACK_MAX_SIZE 50
 #define MAX_HIT 10
 #define MIN_OPACITY 0.01
 #define T_MIN 0.001
 #define MAX_BOUNCE_SENTINEL 1000000u
+#define BASE_DIELECTRIC_REFLECTIVITY 0.04
 
 // max color: ~4096
 // min step: ~0.00000095
@@ -52,7 +54,8 @@ struct MaterialData
     uint type;
     float4 albedo;
     uint albedoTextureIndex;
-    float2 padding;
+    uint normalTextureIndex;
+    uint metallicSmoothnessTextureIndex;
 };
 
 struct PathHitRecord
@@ -61,7 +64,9 @@ struct PathHitRecord
     uint materialType;
     float4 albedo;
     float3 normal;
-    float3 padding;
+    float metallic;
+    float smoothness;
+    uint padding;
 };
 
 struct PathPayload
@@ -83,7 +88,7 @@ struct Vertex
 {
     float3 position;
     float3 normal;
-    float2 albedoUV;
+    float2 uv;
 };
 
 struct Gaussian
@@ -232,4 +237,45 @@ float3 randCosHemisphereSample(float3 normal, float2 uv, int seed)
 
     // transpose(float3x3(tangent, bitangent, normal))
     return sampleTangentSpace.x * tangent + sampleTangentSpace.y * bitangent + sampleTangentSpace.z * normal;
+}
+
+/// <source> https://en.wikipedia.org/wiki/Schlick%27s_approximation </source>
+/// <summary> Schlick's approximation for approximating the Fresnel factor </summary>
+float3 fresnelSchlick(float3 reflectivity, float3 V, float3 H)
+{
+    float base = 1 - max(dot(V, H), 0.0);
+    return reflectivity + (1 - reflectivity) * pow(base, 5.0);
+}
+
+/// <source> https://mudstack.com/blog/tutorials/physically-based-rendering-study-part-2/ </source>
+/// <summary> (GGX) Trowbridge-Reitz Normal Distribution Function - D function in the Cook-Torrance specular function </summary>
+float trowbridgeReitzNDF(float alpha, float3 N, float3 H)
+{
+    float numerator = alpha * alpha;
+
+    float NdotH = max(dot(N, H), 0.0);
+    float base = NdotH * NdotH * (numerator - 1.0) + 1.0;
+    float denominator = max(PI * base * base, EPSILON);
+
+    return numerator / denominator;
+}
+
+/// <source> https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html </source>
+/// <summary> (GGX) Schlick-Beckmann - G1 function in Smith Model </summary>
+float schlickBeckmann(float alpha, float3 N, float3 X)
+{
+    float numerator = max(dot(N, X), 0.0);
+
+    float k = alpha / 2.0;
+    float denominator = max(dot(N,X), 0.0) * (1.0 - k) + k;
+    denominator = max(denominator, EPSILON);
+
+    return numerator / denominator;
+}
+
+/// <source> https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html </source>
+/// <summary> Smith Geometry Shadowing Model - G function in Cook-Torrance specular function </summary>
+float smithGSF(float alpha, float3 N, float3 V, float3 L)
+{
+    return schlickBeckmann(alpha, N, V) * schlickBeckmann(alpha, N, L);
 }

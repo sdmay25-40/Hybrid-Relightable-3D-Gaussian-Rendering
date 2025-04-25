@@ -17,6 +17,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     float3 currentColor = (float3)currentFrameBuffer[getLinearPixelIndex(id.xy, screenWidth)] / COLOR_SCALE;
     float alpha = rcp(frameIndex[0] + 1.0);
+    // TODO: Double check that we are accumulating in the correct color space
     float4 accumulatedColor = accumulationTexture[id.xy];
 
     accumulationTexture[id.xy] = lerp(accumulatedColor, float4(currentColor,1), alpha);

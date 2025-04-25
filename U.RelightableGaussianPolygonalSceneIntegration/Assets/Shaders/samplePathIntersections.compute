@@ -25,7 +25,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     uint2 pixelIndex = getPixelIndex(pathId, pathsPerPixel, screenWidth);
 
-    if (hitRecord.materialType == MATERIAL_EMISSIVE)
+    if (hitRecord.materialType & MATERIAL_IS_EMISSIVE)
     {
         uint idx = (pathId / pathsPerPixel);
         float invPathsPerPixel = 1.0 / pathsPerPixel;
@@ -41,14 +41,52 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // add normal offset to avoid collision with itself
     paths[pathId].origin += hitRecord.t * paths[pathId].direction + float4(hitRecord.normal,0) * EPSILON;
 
-    // cosine weighted sample accounts for Lambert's Law
+    // TODO: GGX importance sampling
+    // cosine weighted sample's pdf accounts for Lambert's Law
     int seed = getSeed(pathBounce, frameIndex[0], pathId);
-    float3 reflect = randCosHemisphereSample(hitRecord.normal, pixelIndex, seed);
-    paths[pathId].direction = float4(reflect, 0);
+    float3 L = randCosHemisphereSample(hitRecord.normal, pixelIndex, seed);
+    float3 lambertianDiffuse = hitRecord.albedo.rgb / PI;
 
-    // Lambertian Diffuse BRDF
-    paths[pathId].throughput *= hitRecord.albedo / PI;
+    // PBR
+    float3 BRDF;
+    if (hitRecord.materialType & MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX)
+    {
+        float3 V = paths[pathId].direction.xyz;
+        float3 H = normalize(L + V);
+        float3 N = hitRecord.normal;
+        float metallic = hitRecord.metallic;
+        float roughness = (1 - hitRecord.smoothness);
+        float alpha = roughness * roughness;
+
+        float3 ks, kd;
+        if (metallic)
+        {
+            ks = fresnelSchlick(hitRecord.albedo.rgb, V, H);
+            kd = (1 - ks) * (1.0 - metallic);
+        }
+        else
+        {
+            ks = fresnelSchlick(BASE_DIELECTRIC_REFLECTIVITY, V, H);
+            kd = 1 - ks;
+        }
+
+        // Cook-Torrance specular function https://learnopengl.com/PBR/Theory
+        float3 cookTorranceNumerator = trowbridgeReitzNDF(alpha, N, H) * smithGSF(alpha, N, V, L) * ks;
+        float cookTorranceDenominator = 4.0 * max(dot(V, N), 0.0) * max(dot(L,N), 0.0);
+        cookTorranceDenominator = max(cookTorranceDenominator, EPSILON);
+        float3 cookTorrance = cookTorranceNumerator / cookTorranceDenominator;
+
+        BRDF = kd * lambertianDiffuse + cookTorrance;
+    }
+    else
+    {
+        // Lambertian Diffuse
+        BRDF = lambertianDiffuse;
+    }
    
+    paths[pathId].throughput *= float4(BRDF, 1);
+    paths[pathId].direction = float4(L, 0);
+
     // add path to continue
     uint prevIndex = pathsContinueCounter.IncrementCounter();
     pathsContinueCounter[prevIndex] = pathId;

@@ -30,7 +30,9 @@ public class HybridGaussianRenderer : MonoBehaviour
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
     private ComputeBuffer vertices;
-    private Texture2DArray textures;
+    private Texture2DArray albedoTextures;
+    private Texture2DArray normalTextures;
+    private Texture2DArray metallicSmoothnessTextures;
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer stackBuffer;
     private ComputeBuffer cameraData;
@@ -74,7 +76,7 @@ public class HybridGaussianRenderer : MonoBehaviour
         stackBuffer = new ComputeBuffer(pathCount *  Utils.STACK_SIZE, sizeof(uint));
         sortedHitsBuffer = new ComputeBuffer(pathCount * Utils.MAX_HIT, Marshal.SizeOf(typeof(PathHitRecord)));
 
-        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref prevCameraData, ref transformToPrevTransform, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref textures);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref prevCameraData, ref transformToPrevTransform, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref albedoTextures, ref normalTextures, ref metallicSmoothnessTextures);
 
         // build and insert Hybrid Gaussian Renderer command buffer into `CameraEvent.AfterEverything`.
         // Unity handles resource dependency-based synchronization.
@@ -132,7 +134,9 @@ public class HybridGaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "vertices", vertices);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "materialDatas", materialDatas);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "gaussians", gaussians);
-                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "textures", textures);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "albedoTextures", albedoTextures);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "normalTextures", normalTextures);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "metallicSmoothnessTextures", metallicSmoothnessTextures);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "sortedHitsBuffer", sortedHitsBuffer);
@@ -317,10 +321,20 @@ public class HybridGaussianRenderer : MonoBehaviour
             vertices.Release();
             vertices = null;
         }
-        if (textures != null)
+        if (albedoTextures != null)
         {
-            Destroy(textures);
-            textures = null;
+            Destroy(albedoTextures);
+            albedoTextures = null;
+        }
+        if (normalTextures != null)
+        {
+            Destroy(normalTextures);
+            normalTextures = null;
+        }
+        if (metallicSmoothnessTextures != null)
+        {
+            Destroy(metallicSmoothnessTextures);
+            metallicSmoothnessTextures = null;
         }
         if (gaussians != null)
         {
