@@ -1,9 +1,10 @@
 #pragma kernel CSMain
+#include "Utils.cginc"
 
 int screenWidth;
 int screenHeight;
 StructuredBuffer<uint> frameIndex;
-Texture2D<float4> renderTexture;
+StructuredBuffer<uint3> currentFrameBuffer;
 RWTexture2D<float4> accumulationTexture;
 
 [numthreads(32,32,1)]
@@ -14,12 +15,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // convert color from linear to sRGB color space
-    float4 currentColor = renderTexture[id.xy];
-    currentColor.rgb = pow(abs(currentColor.rgb), 1/2.2);
-
+    float3 currentColor = (float3)currentFrameBuffer[getLinearPixelIndex(id.xy, screenWidth)] / COLOR_SCALE;
     float alpha = rcp(frameIndex[0] + 1.0);
     float4 accumulatedColor = accumulationTexture[id.xy];
 
-    accumulationTexture[id.xy] = lerp(accumulatedColor, currentColor, alpha);
+    accumulationTexture[id.xy] = lerp(accumulatedColor, float4(currentColor,1), alpha);
 }

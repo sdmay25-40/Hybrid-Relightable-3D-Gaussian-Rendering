@@ -122,6 +122,23 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &259616960 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5519824691375120789, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
+  m_PrefabInstance: {fileID: 1568246200}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &259616965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 259616960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2364d357a24246c6ab39190ea3d3a17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1011198731
 GameObject:
   m_ObjectHideFlags: 0
@@ -228,6 +245,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cam: {fileID: 1011198733}
+  clearCurrentFrameBuffer: {fileID: 7200000, guid: 49251561ae21812488f1e5763a9fb4a7, type: 3}
   generatePrimaryPaths: {fileID: 7200000, guid: 69c3dbaab43622a4c81192cb21511835, type: 3}
   getPathIntersections: {fileID: 7200000, guid: c4c64515e8d610d489bd6295a2b11c26, type: 3}
   samplePathIntersections: {fileID: 7200000, guid: ed12c8c072e50d2418e75410e00ee8f7, type: 3}
@@ -318,7 +336,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5519824691375120789, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 259616965}
   m_SourcePrefab: {fileID: 100100000, guid: c2a1cc576d87d54478fa78b705e2223e, type: 3}
 --- !u!1 &2009103650
 GameObject:

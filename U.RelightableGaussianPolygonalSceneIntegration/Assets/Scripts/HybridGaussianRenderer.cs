@@ -8,6 +8,7 @@ public class HybridGaussianRenderer : MonoBehaviour
 {
     // references
     [SerializeField] private Camera cam;
+    [SerializeField] private ComputeShader clearCurrentFrameBuffer;
     [SerializeField] private ComputeShader generatePrimaryPaths;
     [SerializeField] private ComputeShader getPathIntersections;
     [SerializeField] private ComputeShader samplePathIntersections;
@@ -17,7 +18,7 @@ public class HybridGaussianRenderer : MonoBehaviour
     [SerializeField] private int pathsPerPixel = 1;
     [SerializeField] private int pathBounceLimit = 1;
     private CommandBuffer commandBuffer;
-    private RenderTexture renderTexture;
+    private ComputeBuffer currentFrameBuffer;
     private RenderTexture accumulationTexture;
     private ComputeBuffer frameIndex;
     private ComputeBuffer paths;
@@ -36,9 +37,10 @@ public class HybridGaussianRenderer : MonoBehaviour
     private ComputeBuffer cameraData;
     private ComputeBuffer gaussians;
     private ComputeBuffer sortedHitsBuffer;
-    private MeshRenderer[] meshRenderers;
     private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
     private int numPaths;
+    private Dictionary<Transform, SimpleTransform> transformToPrevTransform = new Dictionary<Transform, SimpleTransform>();
+    private CameraData prevCameraData;
 
     private void Awake()
     {
@@ -52,13 +54,6 @@ public class HybridGaussianRenderer : MonoBehaviour
         cam.depthTextureMode = DepthTextureMode.None;
 
         // create buffers
-        renderTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
-        renderTexture.enableRandomWrite = true;
-        if (!renderTexture.Create())
-        {
-            Debug.LogError("'GaussianRender': Failed to create 'RenderTexture'.");
-        }
-
         accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
         accumulationTexture.enableRandomWrite = true;
         if (!accumulationTexture.Create())
@@ -68,6 +63,8 @@ public class HybridGaussianRenderer : MonoBehaviour
 
         frameIndex = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
         frameIndex.SetData(new uint[]{0});
+
+        currentFrameBuffer = new ComputeBuffer(Screen.width * Screen.height, sizeof(uint) * 3);
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
         numPaths = pathCount;
@@ -80,17 +77,26 @@ public class HybridGaussianRenderer : MonoBehaviour
         stackBuffer = new ComputeBuffer(pathCount *  Utils.STACK_SIZE, sizeof(uint));
         sortedHitsBuffer = new ComputeBuffer(pathCount * Utils.MAX_HIT, Marshal.SizeOf(typeof(PathHitRecord)));
 
-        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref meshRenderers, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref textures);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref prevCameraData, ref transformToPrevTransform, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref textures);
 
-        // build and insert Hybrid Gaussian Render Pipeline command buffer into `CameraEvent.AfterEverything`.
+        // build and insert Hybrid Gaussian Renderer command buffer into `CameraEvent.AfterEverything`.
         // Unity handles resource dependency-based synchronization.
 
         commandBuffer = new CommandBuffer();
         commandBuffer.name = "Hybrid Gaussian Raytracer";
 
-        // reset values
-        commandBuffer.SetRenderTarget(renderTexture);
-        commandBuffer.ClearRenderTarget(true, true, Color.black);
+        // clear current frame buffer
+        {
+            int kernelIndex = clearCurrentFrameBuffer.FindKernel("CSMain");
+            int threadGroupsX = Mathf.CeilToInt(Screen.width / 32.0f);
+            int threadGroupsY = Mathf.CeilToInt(Screen.height / 32.0f);
+            commandBuffer.SetComputeIntParam(clearCurrentFrameBuffer, "screenWidth", Screen.width);
+            commandBuffer.SetComputeIntParam(clearCurrentFrameBuffer, "screenHeight", Screen.height);
+            commandBuffer.SetComputeBufferParam(clearCurrentFrameBuffer, kernelIndex, "currentFrameBuffer", currentFrameBuffer);
+            commandBuffer.DispatchCompute(clearCurrentFrameBuffer, kernelIndex, threadGroupsX, threadGroupsY, 1);
+        }
+
+        // set paths continue size to zero
         commandBuffer.SetBufferCounterValue(pathsContinueCounter, 0);
 
         float workGroupX = 128.0f;
@@ -105,13 +111,13 @@ public class HybridGaussianRenderer : MonoBehaviour
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "invScreenHeight", 1.0f / Screen.height);
             commandBuffer.SetComputeFloatParam(generatePrimaryPaths, "tanFovHalf", Mathf.Tan(cam.fieldOfView * Mathf.Deg2Rad * 0.5f));
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "cameraData", cameraData);
+            commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "frameIndex", frameIndex);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
             commandBuffer.SetComputeBufferParam(generatePrimaryPaths, kernelIndex, "paths", paths);
             commandBuffer.DispatchCompute(generatePrimaryPaths, kernelIndex, threadGroupX, 1, 1);
         }
 
-        // TODO: remove bounce from Path struct (create a int buffer to keep count in the loop)
-        for(uint i = 0; i < pathBounceLimit + 1; i++)
+        for (int i = 0; i < pathBounceLimit + 1; i++)
         {
             commandBuffer.SetBufferCounterValue(pathsContinueTmpCounter, 0);
             commandBuffer.CopyCounterValue(pathsContinueCounter, pathsContinueCounterValue, 0);
@@ -149,10 +155,10 @@ public class HybridGaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "pathsPerPixel", pathsPerPixel);
                 commandBuffer.SetComputeIntParam(samplePathIntersections, "screenWidth", Screen.width);
-                commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounceLimit", pathBounceLimit);
+                commandBuffer.SetComputeIntParam(samplePathIntersections, "pathBounce", i);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "paths", paths);
                 commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "pathsContinueCounter", pathsContinueCounter);
-                commandBuffer.SetComputeTextureParam(samplePathIntersections, kernelIndex, "renderTexture", renderTexture);
+                commandBuffer.SetComputeBufferParam(samplePathIntersections, kernelIndex, "currentFrameBuffer", currentFrameBuffer);
                 commandBuffer.DispatchCompute(samplePathIntersections, kernelIndex, threadGroupX, 1, 1);
             }
         }
@@ -160,12 +166,12 @@ public class HybridGaussianRenderer : MonoBehaviour
         // accumulate render texture
         {
             int kernelIndex = accumulateRenderTexture.FindKernel("CSMain");
-            int threadGroupsX = Mathf.CeilToInt(renderTexture.width / 32.0f);
-            int threadGroupsY = Mathf.CeilToInt(renderTexture.height / 32.0f);
+            int threadGroupsX = Mathf.CeilToInt(Screen.width / 32.0f);
+            int threadGroupsY = Mathf.CeilToInt(Screen.height / 32.0f);
             commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenWidth", Screen.width);
             commandBuffer.SetComputeIntParam(accumulateRenderTexture, "screenHeight", Screen.height);
             commandBuffer.SetComputeBufferParam(accumulateRenderTexture, kernelIndex, "frameIndex", frameIndex);
-            commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "renderTexture", renderTexture);
+            commandBuffer.SetComputeBufferParam(accumulateRenderTexture, kernelIndex, "currentFrameBuffer", currentFrameBuffer);
             commandBuffer.SetComputeTextureParam(accumulateRenderTexture, kernelIndex, "accumulationTexture", accumulationTexture);
             commandBuffer.DispatchCompute(accumulateRenderTexture, kernelIndex, threadGroupsX, threadGroupsY, 1);
         }
@@ -184,14 +190,47 @@ public class HybridGaussianRenderer : MonoBehaviour
 
     private void Update()
     {
-        // TODO: if camera moves or something moves in the scene: update buffers + reset accumulation buffer and frame index
-        // if (true)
-        // {
-        //     SceneSerializer.UpdateSceneDataBuffer(cam, ref cameraData, meshRenderers, ref gameObjectDatasList, ref gameObjectDatas);
-        // }
-        
-        
+        // check if cameraData needs to be updated
+        Vector4 camPos = Utils.GetCameraPosition(cam);
+        Quaternion camRot = cam.transform.rotation;
+        if (!camPos.Equals(prevCameraData.position) || !camRot.Equals(prevCameraData.quaternion))
+        {
+            SceneSerializer.SetCameraDataBuffer(camPos, camRot, ref cameraData, ref prevCameraData);
+            frameIndex.SetData(new uint[]{0});
+        }
 
+        // check if gameObjectsData needs to be updated
+        bool dirtyData = false;
+        List<Transform> keys = new List<Transform>(transformToPrevTransform.Keys);
+        for (int i = 0; i < keys.Count; i++)
+        {
+            Transform t = keys[i];
+            SimpleTransform prevTransform = transformToPrevTransform[t];
+
+            if (!t.position.Equals(prevTransform.position)
+                || !t.rotation.Equals(prevTransform.rotation)
+                || !t.localScale.Equals(prevTransform.scale))
+            {
+                dirtyData = true;
+
+                GameObjectData currGameObj = gameObjectDatasList[i];
+                currGameObj.normalMatrix = t.localToWorldMatrix.inverse.transpose;
+                currGameObj.worldToObject = t.worldToLocalMatrix;
+                gameObjectDatasList[i] = currGameObj;
+
+                transformToPrevTransform[t] = new SimpleTransform
+                {
+                    position = t.position,
+                    rotation = t.rotation,
+                    scale = t.localScale
+                };
+            }
+        }
+        if (dirtyData)
+        {
+            gameObjectDatas.SetData(gameObjectDatasList);
+            frameIndex.SetData(new uint[]{0});
+        }
     }
 
     private void OnDestroy()
@@ -202,10 +241,10 @@ public class HybridGaussianRenderer : MonoBehaviour
             commandBuffer.Release();
             commandBuffer = null;
         }
-        if (renderTexture != null)
+        if (currentFrameBuffer != null)
         {
-            renderTexture.Release();
-            renderTexture = null;
+            currentFrameBuffer.Release();
+            currentFrameBuffer = null;
         }
         if (accumulationTexture != null)
         {
