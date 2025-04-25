@@ -14,6 +14,10 @@
 #define MAX_HIT 10
 #define MIN_OPACITY 0.01
 #define T_MIN 0.001
+#define L_MAX 2
+#define SHC_RED_START 0
+#define SHC_GREEN_START 9
+#define SHC_BLUE_START 18
 
 // when updating, ensure structs in 'Scripts/utils.cs' are updated to match
 // ensure structs satisfy 16-byte alignment; padding is only necessary for arrays
@@ -209,4 +213,16 @@ float3 randCosHemisphereSample(float3 normal, float2 uv, int seed)
 
     // transpose(float3x3(tangent, bitangent, normal))
     return sampleTangentSpace.x * tangent + sampleTangentSpace.y * bitangent + sampleTangentSpace.z * normal;
+}
+
+// Handle exponets with a negative base
+float nPow(float f, float e)
+{
+    int s = 1;
+    if (f<0 && ((uint) abs(e)) % 2 == 1)
+    {
+        s = -1;
+    }
+    float res = pow(abs(f), e);
+    return (res * s);
 }

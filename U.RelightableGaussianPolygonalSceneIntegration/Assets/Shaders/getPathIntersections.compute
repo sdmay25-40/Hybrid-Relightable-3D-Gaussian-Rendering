@@ -1,5 +1,6 @@
 #pragma kernel CSMain
 #include "utils.cginc"
+#include "alp.cginc"
 
 StructuredBuffer<PathPayload> paths;
 StructuredBuffer<uint> pathsContinueCounter;
@@ -25,6 +26,61 @@ float opacityAtPoint(float3 pos, Gaussian gauss){
     float4 invCovTimesPointToGaussianOrigin = mul(gauss.invCov, pointToGaussianOrigin);
     float exponent = -0.5 * mul(transpose((float4x1)pointToGaussianOrigin), invCovTimesPointToGaussianOrigin);
     return pow(EULER_NUM, exponent);
+}
+
+// This should be efficient for our use case
+uint factorial(uint l){
+    float res = 1;
+    for(uint i = 2; i <= l; i++){
+        res *= i;
+    }
+
+    return res;
+}
+
+/// <summary> Calculate the color a gaussian is from a certain view direction 
+/// using spherical harmonics. </summary>
+float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointObjSpace, float3 gaussianCenter){
+    float4 shColor = float4(0, 0, 0, 1);
+
+    float3 diffVec = float3(gaussianCenter.x - viewPointObjSpace.x, gaussianCenter.y - viewPointObjSpace.y, gaussianCenter.z - viewPointObjSpace.z);
+
+    float r = sqrt(pow(diffVec.x, 2) + pow(diffVec.y, 2) + pow(diffVec.z, 2));
+    float theta = atan(diffVec.z / r);
+    float phi = asin(diffVec.y / r);
+
+    uint coefficientIndexCounter = 0;
+    for(uint l = 0; l <= L_MAX; l++){
+        for(uint m = -1 * l; m <= l; m++){
+            
+            float term1 = nPow(-1, l) / (pow(2, l) * factorial(l));
+
+            float term2Numerator = factorial(((2 * l) + 1) + (l * m));
+            float term2Denominator = factorial(4 * PI * (l -m ));
+            float term2 = sqrt(term2Numerator / term2Denominator);
+            
+            // We discard the imaginary component of this term for computer graphics
+            float term3 = cos(m * theta);
+
+            float term4 = nPow(sin(theta), -1 * m);
+
+            float term5 = alpMap(l, m, theta);
+            
+            // Combien all terms
+            float shVal = term1 * term2  * term3 * term4 * term5;
+            
+            // Add to total sum (The color)
+            float redComp = coefficients[SHC_RED_START + coefficientIndexCounter] * shVal;
+            float greenComp = coefficients[SHC_GREEN_START + coefficientIndexCounter] * shVal;
+            float blueComp = coefficients[SHC_BLUE_START + coefficientIndexCounter] * shVal;
+            shColor += float4(redComp, greenComp, blueComp, 0);
+
+            coefficientIndexCounter++;
+        }
+    }
+
+
+    return shColor;
 }
 
 void insertionSortAndCull(uint idX, inout uint hitCount, PathHitRecord newHit)
@@ -168,7 +224,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
                                 tmpHit.t = t;
                                 tmpHit.materialType = MATERIAL_EMISSIVE;
-                                tmpHit.albedo = gauss.color;
+                                tmpHit.albedo = calcSphericalHarmonicsForPoint(gauss.shCoefficients, pathOriginObjSpace, gauss.pos);
                                 tmpHit.normal = normalize(rx - gauss.pos);
 
                                 insertionSortAndCull(id.x, hitCount, tmpHit);
