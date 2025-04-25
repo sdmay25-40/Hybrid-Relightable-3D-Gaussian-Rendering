@@ -6,7 +6,8 @@ using UnityEditor;
 
 public class GaussianScrpt : MonoBehaviour
 {
-    [Tooltip("Drop a Gaussian *.ply file here")]
+    [Header("References")]
+    [Tooltip("Assign a 3D Gaussian *.ply file here.")]
     [SerializeField]
     private DefaultAsset gaussianFile;
     private string filePath;
@@ -16,7 +17,7 @@ public class GaussianScrpt : MonoBehaviour
         {
             if (gaussianFile == null)
             {
-                Debug.LogError("Gaussian *.ply file is NOT set! Please assign a vaild *.ply file in the Inspector");
+                Debug.LogError("3D Gaussian *.ply file is NOT set! Please assign a vaild *.ply file in the Inspector.");
             }
             return filePath;
         }

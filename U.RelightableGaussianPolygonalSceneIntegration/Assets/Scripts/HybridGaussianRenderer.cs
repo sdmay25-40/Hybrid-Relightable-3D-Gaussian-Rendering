@@ -5,17 +5,26 @@ using UnityEngine.Rendering;
 
 public class HybridGaussianRenderer : MonoBehaviour
 {
-    // references
+    [Header("References")]
+    [Tooltip("Camera used to generate primary rays from and render the scene.")]
     [SerializeField] private Camera cam;
+    [Tooltip("Clears the current frame buffer before the new ray tracing pass.")]
     [SerializeField] private ComputeShader clearCurrentFrameBuffer;
+    [Tooltip("Generates jittered sampled primary rays from the camera for each pixel.")]
     [SerializeField] private ComputeShader generatePrimaryPaths;
+    [Tooltip("Finds scene intersections for paths using BVH traversal and Gaussian-triangle evaluation.")]
     [SerializeField] private ComputeShader getPathIntersections;
+    [Tooltip("Calculates physically-based lighting and ray reflection behavior at intersection points.")]
     [SerializeField] private ComputeShader samplePathIntersections;
+    [Tooltip("Accumulates color contributions from the current frame.")]
     [SerializeField] private ComputeShader accumulateRenderTexture;
+    [Tooltip("Increments the frame index compute buffer.")]
     [SerializeField] private ComputeShader increment;
-    // settings
-    [SerializeField] private int pathsPerPixel = 1;
-    [SerializeField] private int pathBounceLimit = 1;
+    [Header("Settings")]
+    [Tooltip("Number of primary rays to trace per pixel.\n\nHigher path numbers will reduce the noise per frame, but will increase render time and ComputeBuffer size.")]
+    [SerializeField, Range(1,4)] private int pathsPerPixel = 1;
+    [Tooltip("Maximum number of bounces a path can take before termination.")]
+    [SerializeField, Range(1,6)] private int pathBounceLimit = 1;
     private CommandBuffer commandBuffer;
     private ComputeBuffer currentFrameBuffer;
     private RenderTexture accumulationTexture;
