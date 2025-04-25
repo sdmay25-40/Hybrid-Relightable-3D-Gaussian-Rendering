@@ -54,7 +54,7 @@ public class HybridGaussianRenderer : MonoBehaviour
         cam.depthTextureMode = DepthTextureMode.None;
 
         // create buffers
-        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
+        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat);
         accumulationTexture.enableRandomWrite = true;
         if (!accumulationTexture.Create())
         {

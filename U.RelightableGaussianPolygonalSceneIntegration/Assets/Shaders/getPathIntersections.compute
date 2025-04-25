@@ -164,7 +164,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                         gauss.color.w = opacity;
 
                         tmpHit.t = t;
-                        tmpHit.materialType = 0; // diffuse
+                        tmpHit.materialType = MATERIAL_IS_EMISSIVE;
                         tmpHit.albedo = gauss.color;
                         tmpHit.normal = normalize(rx - gauss.pos);
                         tmpHit.metallic = 0;
