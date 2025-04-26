@@ -88,247 +88,247 @@ float alp_8_8(float theta){return 2027025*nPow(1 - nPow(cos(theta), 2.0), 4.0);}
 // Call the correct function for l and m values
 float alpMap(int l, int m, float theta){
     if(l == 0 && m == 0){
-        alp_0_0(theta);
+        return alp_0_0(theta);
     }
     if(l == 1 && m == -1){
-        alp_1_n1(theta);
+        return alp_1_n1(theta);
     }
     if(l == 1 && m == 0){
-        alp_1_0(theta);
+        return alp_1_0(theta);
     }
     if(l == 1 && m == 1){
-        alp_1_1(theta);
+        return alp_1_1(theta);
     }
     if(l == 2 && m == -2){
-        alp_2_n2(theta);
+        return alp_2_n2(theta);
     }
     if(l == 2 && m == -1){
-        alp_2_n1(theta);
+        return alp_2_n1(theta);
     }
     if(l == 2 && m == 0){
-        alp_2_0(theta);
+        return alp_2_0(theta);
     }
     if(l == 2 && m == 1){
-        alp_2_1(theta);
+        return alp_2_1(theta);
     }
     if(l == 2 && m == 2){
-        alp_2_2(theta);
+        return alp_2_2(theta);
     }
     if(l == 3 && m == -3){
-        alp_3_n3(theta);
+        return alp_3_n3(theta);
     }
     if(l == 3 && m == -2){
-        alp_3_n2(theta);
+        return alp_3_n2(theta);
     }
     if(l == 3 && m == -1){
-        alp_3_n1(theta);
+        return alp_3_n1(theta);
     }
     if(l == 3 && m == 0){
-        alp_3_0(theta);
+        return alp_3_0(theta);
     }
     if(l == 3 && m == 1){
-        alp_3_1(theta);
+        return alp_3_1(theta);
     }
     if(l == 3 && m == 2){
-        alp_3_2(theta);
+        return alp_3_2(theta);
     }
     if(l == 3 && m == 3){
-        alp_3_3(theta);
+        return alp_3_3(theta);
     }
     if(l == 4 && m == -4){
-        alp_4_n4(theta);
+        return alp_4_n4(theta);
     }
     if(l == 4 && m == -3){
-        alp_4_n3(theta);
+        return alp_4_n3(theta);
     }
     if(l == 4 && m == -2){
-        alp_4_n2(theta);
+        return alp_4_n2(theta);
     }
     if(l == 4 && m == -1){
-        alp_4_n1(theta);
+        return alp_4_n1(theta);
     }
     if(l == 4 && m == 0){
-        alp_4_0(theta);
+        return alp_4_0(theta);
     }
     if(l == 4 && m == 1){
-        alp_4_1(theta);
+        return alp_4_1(theta);
     }
     if(l == 4 && m == 2){
-        alp_4_2(theta);
+        return alp_4_2(theta);
     }
     if(l == 4 && m == 3){
-        alp_4_3(theta);
+        return alp_4_3(theta);
     }
     if(l == 4 && m == 4){
-        alp_4_4(theta);
+        return alp_4_4(theta);
     }
     if(l == 5 && m == -5){
-        alp_5_n5(theta);
+        return alp_5_n5(theta);
     }
     if(l == 5 && m == -4){
-        alp_5_n4(theta);
+        return alp_5_n4(theta);
     }
     if(l == 5 && m == -3){
-        alp_5_n3(theta);
+        return alp_5_n3(theta);
     }
     if(l == 5 && m == -2){
-        alp_5_n2(theta);
+        return alp_5_n2(theta);
     }
     if(l == 5 && m == -1){
-        alp_5_n1(theta);
+        return alp_5_n1(theta);
     }
     if(l == 5 && m == 0){
-        alp_5_0(theta);
+        return alp_5_0(theta);
     }
     if(l == 5 && m == 1){
-        alp_5_1(theta);
+        return alp_5_1(theta);
     }
     if(l == 5 && m == 2){
-        alp_5_2(theta);
+        return alp_5_2(theta);
     }
     if(l == 5 && m == 3){
-        alp_5_3(theta);
+        return alp_5_3(theta);
     }
     if(l == 5 && m == 4){
-        alp_5_4(theta);
+        return alp_5_4(theta);
     }
     if(l == 5 && m == 5){
-        alp_5_5(theta);
+        return alp_5_5(theta);
     }
     if(l == 6 && m == -6){
-        alp_6_n6(theta);
+        return alp_6_n6(theta);
     }
     if(l == 6 && m == -5){
-        alp_6_n5(theta);
+        return alp_6_n5(theta);
     }
     if(l == 6 && m == -4){
-        alp_6_n4(theta);
+        return alp_6_n4(theta);
     }
     if(l == 6 && m == -3){
-        alp_6_n3(theta);
+        return alp_6_n3(theta);
     }
     if(l == 6 && m == -2){
-        alp_6_n2(theta);
+        return alp_6_n2(theta);
     }
     if(l == 6 && m == -1){
-        alp_6_n1(theta);
+        return alp_6_n1(theta);
     }
     if(l == 6 && m == 0){
-        alp_6_0(theta);
+        return alp_6_0(theta);
     }
     if(l == 6 && m == 1){
-        alp_6_1(theta);
+        return alp_6_1(theta);
     }
     if(l == 6 && m == 2){
-        alp_6_2(theta);
+        return alp_6_2(theta);
     }
     if(l == 6 && m == 3){
-        alp_6_3(theta);
+        return alp_6_3(theta);
     }
     if(l == 6 && m == 4){
-        alp_6_4(theta);
+        return alp_6_4(theta);
     }
     if(l == 6 && m == 5){
-        alp_6_5(theta);
+        return alp_6_5(theta);
     }
     if(l == 6 && m == 6){
-        alp_6_6(theta);
+        return alp_6_6(theta);
     }
     if(l == 7 && m == -7){
-        alp_7_n7(theta);
+        return alp_7_n7(theta);
     }
     if(l == 7 && m == -6){
-        alp_7_n6(theta);
+        return alp_7_n6(theta);
     }
     if(l == 7 && m == -5){
-        alp_7_n5(theta);
+        return alp_7_n5(theta);
     }
     if(l == 7 && m == -4){
-        alp_7_n4(theta);
+        return alp_7_n4(theta);
     }
     if(l == 7 && m == -3){
-        alp_7_n3(theta);
+        return alp_7_n3(theta);
     }
     if(l == 7 && m == -2){
-        alp_7_n2(theta);
+        return alp_7_n2(theta);
     }
     if(l == 7 && m == -1){
-        alp_7_n1(theta);
+        return alp_7_n1(theta);
     }
     if(l == 7 && m == 0){
-        alp_7_0(theta);
+        return alp_7_0(theta);
     }
     if(l == 7 && m == 1){
-        alp_7_1(theta);
+        return alp_7_1(theta);
     }
     if(l == 7 && m == 2){
-        alp_7_2(theta);
+        return alp_7_2(theta);
     }
     if(l == 7 && m == 3){
-        alp_7_3(theta);
+        return alp_7_3(theta);
     }
     if(l == 7 && m == 4){
-        alp_7_4(theta);
+        return alp_7_4(theta);
     }
     if(l == 7 && m == 5){
-        alp_7_5(theta);
+        return alp_7_5(theta);
     }
     if(l == 7 && m == 6){
-        alp_7_6(theta);
+        return alp_7_6(theta);
     }
     if(l == 7 && m == 7){
-        alp_7_7(theta);
+        return alp_7_7(theta);
     }
     if(l == 8 && m == -8){
-        alp_8_n8(theta);
+        return alp_8_n8(theta);
     }
     if(l == 8 && m == -7){
-        alp_8_n7(theta);
+        return alp_8_n7(theta);
     }
     if(l == 8 && m == -6){
-        alp_8_n6(theta);
+        return alp_8_n6(theta);
     }
     if(l == 8 && m == -5){
-        alp_8_n5(theta);
+        return alp_8_n5(theta);
     }
     if(l == 8 && m == -4){
-        alp_8_n4(theta);
+        return alp_8_n4(theta);
     }
     if(l == 8 && m == -3){
-        alp_8_n3(theta);
+        return alp_8_n3(theta);
     }
     if(l == 8 && m == -2){
-        alp_8_n2(theta);
+        return alp_8_n2(theta);
     }
     if(l == 8 && m == -1){
-        alp_8_n1(theta);
+        return alp_8_n1(theta);
     }
     if(l == 8 && m == 0){
-        alp_8_0(theta);
+        return alp_8_0(theta);
     }
     if(l == 8 && m == 1){
-        alp_8_1(theta);
+        return alp_8_1(theta);
     }
     if(l == 8 && m == 2){
-        alp_8_2(theta);
+        return alp_8_2(theta);
     }
     if(l == 8 && m == 3){
-        alp_8_3(theta);
+        return alp_8_3(theta);
     }
     if(l == 8 && m == 4){
-        alp_8_4(theta);
+        return alp_8_4(theta);
     }
     if(l == 8 && m == 5){
-        alp_8_5(theta);
+        return alp_8_5(theta);
     }
     if(l == 8 && m == 6){
-        alp_8_6(theta);
+        return alp_8_6(theta);
     }
     if(l == 8 && m == 7){
-        alp_8_7(theta);
+        return alp_8_7(theta);
     }
     if(l == 8 && m == 8){
-        alp_8_8(theta);
+        return alp_8_8(theta);
     }
     
     return -1;

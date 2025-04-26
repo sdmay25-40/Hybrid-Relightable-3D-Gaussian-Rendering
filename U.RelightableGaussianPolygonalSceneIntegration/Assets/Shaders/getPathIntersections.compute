@@ -40,8 +40,8 @@ uint factorial(uint l){
 
 /// <summary> Calculate the color a gaussian is from a certain view direction 
 /// using spherical harmonics. </summary>
-float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointObjSpace, float3 gaussianCenter){
-    float4 shColor = float4(0, 0, 0, 1);
+float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointObjSpace, float3 gaussianCenter, float opacity){
+    float4 shColor = float4(0, 0, 0, opacity);
 
     float3 diffVec = float3(gaussianCenter.x - viewPointObjSpace.x, gaussianCenter.y - viewPointObjSpace.y, gaussianCenter.z - viewPointObjSpace.z);
 
@@ -73,6 +73,7 @@ float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointOb
             float redComp = coefficients[SHC_RED_START + coefficientIndexCounter] * shVal;
             float greenComp = coefficients[SHC_GREEN_START + coefficientIndexCounter] * shVal;
             float blueComp = coefficients[SHC_BLUE_START + coefficientIndexCounter] * shVal;
+            
             shColor += float4(redComp, greenComp, blueComp, 0);
 
             coefficientIndexCounter++;
@@ -224,7 +225,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
                                 tmpHit.t = t;
                                 tmpHit.materialType = MATERIAL_EMISSIVE;
-                                tmpHit.albedo = calcSphericalHarmonicsForPoint(gauss.shCoefficients, pathOriginObjSpace, gauss.pos);
+                                tmpHit.albedo = calcSphericalHarmonicsForPoint(gauss.shCoefficients, pathOriginObjSpace, gauss.pos, opacity);
                                 tmpHit.normal = normalize(rx - gauss.pos);
 
                                 insertionSortAndCull(id.x, hitCount, tmpHit);
