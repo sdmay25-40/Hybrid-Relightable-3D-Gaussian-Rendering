@@ -244,6 +244,7 @@ public class GaussianPlyParser
             //Quaternion rot = new Quaternion(ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat));
 
             Vector4 color = new Vector4(shCoefficients[0], shCoefficients[9], shCoefficients[18], 1);
+
             // Read off opacity
             ReadNextFloat(binaryReader, fileFormat);
         

@@ -29,13 +29,44 @@ float opacityAtPoint(float3 pos, Gaussian gauss){
 }
 
 // This should be efficient for our use case
-uint factorial(uint l){
+int factorial(int l){
     float res = 1;
-    for(uint i = 2; i <= l; i++){
+
+    for(int i = 2; i <= l; i++){
         res *= i;
     }
 
     return res;
+}
+
+float4 sphericalHarmonicsForLM(int l, int m, float coefficients[27], float theta, float phi, 
+    float coefficientIndexCounter){
+
+            
+    float term1 = nPow(-1, l) / (pow(2, l) * factorial(l));
+
+    float term2Numerator = factorial(((2 * l) + 1) + (l * m));
+    float term2Denominator = 4 * PI * factorial(l  - m);
+    float term2 = sqrt(term2Numerator / term2Denominator);
+    
+    // We discard the imaginary component of this term for computer graphics
+    float term3 = pow(EULER_NUM, cos(m * phi));
+
+    float term4 = nPow(sin(theta), -1 * m);
+
+    float term5 = alpMap(l, m, theta);
+    
+    // Combien all terms
+    float shVal = term1 * term2  * term3 * term4 * term5;
+    
+    // Add to total sum (The color)
+    float redComp = coefficients[SHC_RED_START + coefficientIndexCounter] * shVal;
+    float greenComp = coefficients[SHC_GREEN_START + coefficientIndexCounter] * shVal;
+    float blueComp = coefficients[SHC_BLUE_START + coefficientIndexCounter] * shVal;
+
+    //coefficientIndexCounter++;
+
+    return float4(redComp, greenComp, blueComp, 0);
 }
 
 /// <summary> Calculate the color a gaussian is from a certain view direction 
@@ -50,36 +81,28 @@ float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointOb
     float phi = asin(diffVec.y / r);
 
     uint coefficientIndexCounter = 0;
-    for(uint l = 0; l <= L_MAX; l++){
-        for(uint m = -1 * l; m <= l; m++){
-            
-            float term1 = nPow(-1, l) / (pow(2, l) * factorial(l));
 
-            float term2Numerator = factorial(((2 * l) + 1) + (l * m));
-            float term2Denominator = factorial(4 * PI * (l -m ));
-            float term2 = sqrt(term2Numerator / term2Denominator);
-            
-            // We discard the imaginary component of this term for computer graphics
-            float term3 = cos(m * theta);
+    shColor += sphericalHarmonicsForLM(0, 0, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
 
-            float term4 = nPow(sin(theta), -1 * m);
+    
+    shColor += sphericalHarmonicsForLM(1, -1, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
+    shColor += sphericalHarmonicsForLM(1, 0, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
+    shColor += sphericalHarmonicsForLM(1, 1, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
 
-            float term5 = alpMap(l, m, theta);
-            
-            // Combien all terms
-            float shVal = term1 * term2  * term3 * term4 * term5;
-            
-            // Add to total sum (The color)
-            float redComp = coefficients[SHC_RED_START + coefficientIndexCounter] * shVal;
-            float greenComp = coefficients[SHC_GREEN_START + coefficientIndexCounter] * shVal;
-            float blueComp = coefficients[SHC_BLUE_START + coefficientIndexCounter] * shVal;
-            
-            shColor += float4(redComp, greenComp, blueComp, 0);
-
-            coefficientIndexCounter++;
-        }
-    }
-
+    shColor += sphericalHarmonicsForLM(2, -2, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
+    shColor += sphericalHarmonicsForLM(2, -1, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
+    shColor += sphericalHarmonicsForLM(2, 0, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
+    shColor += sphericalHarmonicsForLM(2, 1, coefficients, theta, phi, coefficientIndexCounter);
+    coefficientIndexCounter++;
+    shColor += sphericalHarmonicsForLM(2, 2, coefficients, theta, phi, coefficientIndexCounter);
+    
 
     return shColor;
 }
