@@ -23,15 +23,12 @@ def writeConvertedBody(oldBody : str, file):
 # Convert the file specified on the command line
 def main():
     fileName = sys.argv[1]
+    outputPath = sys.argv[2]
     oldFile = open(fileName, 'r')
     contents = oldFile.read()
     oldFile.close()
 
-    extensionIndex = fileName.rfind('.')
-    fileNameNoExtension = fileName[0 : extensionIndex]
-    fileExtension = fileName[extensionIndex:]
-
-    newFile = open(fileNameNoExtension + "Bin" + fileExtension, 'wb')
+    newFile = open(outputPath, 'wb')
 
     headerLoc = 0
     if "end_header" in contents:
