@@ -1,18 +1,21 @@
 #define FLT_MAX 3.402823e+38
 #define UINT_MAX 4294967295U
 #define EPSILON 1e-6
+#define LOW_PRECISION_EPSILON 1e-3
 #define PI 3.14159265359
 #define EULER_NUM 2.71828
 #define PRIM_TYPE_TRIANGLE 0
 #define PRIM_TYPE_GAUSSIAN 1
-#define MATERIAL_DIFFUSE 0
-#define MATERIAL_EMISSIVE 1
-#define MATERIAL_TEXTURED 2
+#define MATERIAL_IS_EMISSIVE 1
+#define MATERIAL_HAS_ALBEDO_TEX 1u << 1
+#define MATERIAL_HAS_NORMAL_TEX 1u << 2
+#define MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX 1u << 3
 #define STACK_MAX_SIZE 50
 #define MAX_HIT 10
 #define MIN_OPACITY 0.01
 #define T_MIN 0.001
 #define MAX_BOUNCE_SENTINEL 1000000u
+#define BASE_DIELECTRIC_REFLECTIVITY 0.04
 
 // max color: ~4096
 // min step: ~0.00000095
@@ -52,7 +55,8 @@ struct MaterialData
     uint type;
     float4 albedo;
     uint albedoTextureIndex;
-    float2 padding;
+    uint normalTextureIndex;
+    uint metallicSmoothnessTextureIndex;
 };
 
 struct PathHitRecord
@@ -61,7 +65,9 @@ struct PathHitRecord
     uint materialType;
     float4 albedo;
     float3 normal;
-    float3 padding;
+    float metallic;
+    float smoothness;
+    uint padding;
 };
 
 struct PathPayload
@@ -83,7 +89,7 @@ struct Vertex
 {
     float3 position;
     float3 normal;
-    float2 albedoUV;
+    float2 uv;
 };
 
 struct Gaussian
@@ -210,26 +216,119 @@ float2 randDiskSample(float2 uv, uint seed)
 
 /// <source> https://pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#Cosine-WeightedHemisphereSampling </source>
 /// <summary> Generates a cosine weighted sample of a hemisphere using Malley's Method </summary>
-float3 randCosHemisphereSample(float3 normal, float2 uv, int seed)
+float3 randCosHemisphereSample(float3 normal, float2 uv, uint seed)
 {
     // generate random, cosine-weighted direction above xy-plane
     float2 rand = randDiskSample(uv, seed);
     float z = sqrt(max(0, 1 - rand.x * rand.x - rand.y * rand.y));
     float3 sampleTangentSpace = float3(rand, z);
 
-    // rotate the z-axis to align with the normal of the surface
-    float3 tangent;
-    if (abs(normal.y) > 1 - EPSILON)
-    {
-        tangent = float3(1,0,0);
-    }
-    else
-    {
-        tangent = normalize(cross(float3(0,1,0), normal));
-    }
-
+    // translate tangent to world space
+    float3 up = abs(normal.y) < (1 - LOW_PRECISION_EPSILON) ? float3(0.0, 1.0, 0.0) : float3(0.0, 0.0, 1.0);
+    float3 tangent = normalize(cross(up, normal));
     float3 bitangent = cross(normal, tangent);
 
+    // row major
     // transpose(float3x3(tangent, bitangent, normal))
     return sampleTangentSpace.x * tangent + sampleTangentSpace.y * bitangent + sampleTangentSpace.z * normal;
+}
+
+/// <source> https://en.wikipedia.org/wiki/Schlick%27s_approximation </source>
+/// <summary> Schlick's approximation for approximating the Fresnel factor </summary>
+float3 fresnelSchlick(float3 reflectivity, float3 V, float3 H)
+{
+    float base = 1 - max(dot(V, H), 0.0);
+    return reflectivity + (1 - reflectivity) * pow(base, 5.0);
+}
+
+/// <source> https://mudstack.com/blog/tutorials/physically-based-rendering-study-part-2/ </source>
+/// <summary> (GGX) Trowbridge-Reitz Normal Distribution Function - D function in the Cook-Torrance specular function </summary>
+float trowbridgeReitzNDF(float alpha, float3 N, float3 H)
+{
+    float numerator = alpha * alpha;
+
+    float NdotH = max(dot(N, H), 0.0);
+    float base = NdotH * NdotH * (numerator - 1.0) + 1.0;
+    float denominator = max(PI * base * base, EPSILON);
+
+    return numerator / denominator;
+}
+
+/// <source> https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html </source>
+/// <summary> (GGX) Schlick-Beckmann - G1 function in Smith Model </summary>
+float schlickBeckmann(float alpha, float3 N, float3 X)
+{
+    float numerator = max(dot(N, X), 0.0);
+
+    float k = alpha / 2.0;
+    float denominator = max(dot(N,X), 0.0) * (1.0 - k) + k;
+    denominator = max(denominator, EPSILON);
+
+    return numerator / denominator;
+}
+
+/// <source> https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html </source>
+/// <summary> Smith Geometry Shadowing Model - G function in Cook-Torrance specular function </summary>
+float smithGSF(float alpha, float3 N, float3 V, float3 L)
+{
+    return schlickBeckmann(alpha, N, V) * schlickBeckmann(alpha, N, L);
+}
+
+/// <source> https://schuttejoe.github.io/post/ggximportancesamplingpart2/ </source>
+/// <summary> GGX importance sampled direction </summary>
+float3 randGGXImportanceSample(float3 N, float3 V, float roughness, float2 uv, uint seed)
+{
+    float2 rand = rand2(uv, seed);
+
+    // translate world space to local space
+    float3 up = abs(N.y) < (1 - LOW_PRECISION_EPSILON) ? float3(0.0, 1.0, 0.0) : float3(0.0, 0.0, 1.0);
+    float3 tangent = normalize(cross(up, N));
+    float3 bitangent = cross(N, tangent);
+
+    float3 vLocalSpace = float3(dot(V, tangent), dot(V, N), dot(V, bitangent));
+
+    // stretch V towards normal based on roughness
+    float3 v = normalize(float3(vLocalSpace.x * roughness, vLocalSpace.y, vLocalSpace.z * roughness));
+
+    // build orthonormal basis
+    float3 t1 = (v.y < (1-LOW_PRECISION_EPSILON)) ? normalize(cross(v, float3(0,1,0))) : float3(1,0,0);
+    float3 t2 = cross(t1, v);
+
+    // point on a disk with each half of the disk weighted proportionally to its projection onto direction v
+    float a = 1.0 / (1.0 + v.y);
+    float r = sqrt(rand.x);
+    float phi = (rand.y < a) ? (rand.y / a) * PI : PI + (rand.y - a) / (1.0 - a) * PI;
+    float p1 = r * cos(phi);
+    float p2 = r * sin(phi) * ((rand.y < a) ? 1.0 : v.y);
+
+    // calculate the normal in this stretched tangent space
+    float3 n = p1 * t1 + p2 * t2 + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * v;
+
+    // unstretch and normalize the normal
+    float3 nLocalSpace = normalize(float3(roughness * n.x, max(0.0, n.y), roughness * n.z));
+
+    float3 lLocalSpace = reflect(-vLocalSpace,nLocalSpace);
+
+    // transform L local space to world space
+    return lLocalSpace.x * tangent + lLocalSpace.y * N + lLocalSpace.z * bitangent;
+}
+
+float ggxPDF(float3 N, float3 V, float3 L, float roughness)
+{
+    float3 H = normalize(V + L);
+    float NoV = max(dot(N, V), 0.0);
+    float NoL = max(dot(N, L), 0.0);
+    float NoH = max(dot(N, H), 0.0);
+    float VoH = max(dot(V, H), 0.0);
+
+    // GGX NDF
+    float a2 = roughness * roughness;
+    float d = NoH * NoH * (a2 - 1.0) + 1.0;
+    float D = a2 / (PI * d * d);
+
+    // smith masking function
+    float lambda = (-1.0 + sqrt(1.0 + a2 * (1.0 - NoV * NoV) / (NoV * NoV))) * 0.5;
+    float G1 = 1.0 / (1.0 + lambda);
+
+    return (D * G1 * VoH) / (NoV * max(LOW_PRECISION_EPSILON, VoH));
 }

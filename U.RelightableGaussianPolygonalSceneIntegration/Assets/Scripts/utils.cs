@@ -8,9 +8,10 @@ public enum PrimType : uint
 
 public enum MaterialType : uint
 {
-    Diffuse = 0,
-    Emissive = 1,
-    Textured = 2
+    IsEmissive = 1u,
+    HasAlbedoTex = 1u << 1,
+    HasNormalTex = 1u << 2,
+    HasMetallicSmoothnessTex = 1u << 3,
 }
 
 // when updating, ensure structs in 'Shaders/utils.cginc' are updated to match
@@ -44,10 +45,11 @@ public struct GameObjectData
 
 public struct MaterialData
 {
-    public MaterialType type;
+    public uint type;
     public Vector4 albedo;
     public uint albedoTextureIndex;
-    private Vector2 padding;
+    public uint normalTextureIndex;
+    public uint metallicSmoothnessTextureIndex;
 }
 
 public struct PathHitRecord
@@ -56,7 +58,9 @@ public struct PathHitRecord
     public uint materialType;
     public Vector4 albedo;
     public Vector3 normal;
-    private Vector3 padding;
+    public float metallic;
+    public float smoothness;
+    private uint padding;
 }
 
 public struct PathPayload
@@ -78,7 +82,7 @@ public struct Vertex
 {
     public Vector3 position;
     public Vector3 normal;
-    public Vector2 albedoUV;
+    public Vector2 uv;
 }
 
 public struct SimpleTransform

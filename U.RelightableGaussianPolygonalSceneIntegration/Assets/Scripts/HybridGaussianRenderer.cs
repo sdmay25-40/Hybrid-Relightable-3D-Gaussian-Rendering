@@ -5,17 +5,26 @@ using UnityEngine.Rendering;
 
 public class HybridGaussianRenderer : MonoBehaviour
 {
-    // references
+    [Header("References")]
+    [Tooltip("Camera used to generate primary rays from and render the scene.")]
     [SerializeField] private Camera cam;
+    [Tooltip("Clears the current frame buffer before the new ray tracing pass.")]
     [SerializeField] private ComputeShader clearCurrentFrameBuffer;
+    [Tooltip("Generates jittered sampled primary rays from the camera for each pixel.")]
     [SerializeField] private ComputeShader generatePrimaryPaths;
+    [Tooltip("Finds scene intersections for paths using BVH traversal and Gaussian-triangle evaluation.")]
     [SerializeField] private ComputeShader getPathIntersections;
+    [Tooltip("Calculates physically-based lighting and ray reflection behavior at intersection points.")]
     [SerializeField] private ComputeShader samplePathIntersections;
+    [Tooltip("Accumulates color contributions from the current frame.")]
     [SerializeField] private ComputeShader accumulateRenderTexture;
+    [Tooltip("Increments the frame index compute buffer.")]
     [SerializeField] private ComputeShader increment;
-    // settings
-    [SerializeField] private int pathsPerPixel = 1;
-    [SerializeField] private int pathBounceLimit = 1;
+    [Header("Settings")]
+    [Tooltip("Number of primary rays to trace per pixel.\n\nHigher path numbers will reduce the noise per frame, but will increase render time and ComputeBuffer size.")]
+    [SerializeField, Range(1,4)] private int pathsPerPixel = 1;
+    [Tooltip("Maximum number of bounces a path can take before termination.")]
+    [SerializeField, Range(1,6)] private int pathBounceLimit = 1;
     private CommandBuffer commandBuffer;
     private ComputeBuffer currentFrameBuffer;
     private RenderTexture accumulationTexture;
@@ -30,7 +39,9 @@ public class HybridGaussianRenderer : MonoBehaviour
     private ComputeBuffer materialDatas;
     private ComputeBuffer triangles;
     private ComputeBuffer vertices;
-    private Texture2DArray textures;
+    private Texture2DArray albedoTextures;
+    private Texture2DArray normalTextures;
+    private Texture2DArray metallicSmoothnessTextures;
     private ComputeBuffer gameObjectDatas;
     private ComputeBuffer stackBuffer;
     private ComputeBuffer cameraData;
@@ -52,7 +63,7 @@ public class HybridGaussianRenderer : MonoBehaviour
         cam.depthTextureMode = DepthTextureMode.None;
 
         // create buffers
-        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32);
+        accumulationTexture = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat);
         accumulationTexture.enableRandomWrite = true;
         if (!accumulationTexture.Create())
         {
@@ -74,7 +85,7 @@ public class HybridGaussianRenderer : MonoBehaviour
         stackBuffer = new ComputeBuffer(pathCount *  Utils.STACK_SIZE, sizeof(uint));
         sortedHitsBuffer = new ComputeBuffer(pathCount * Utils.MAX_HIT, Marshal.SizeOf(typeof(PathHitRecord)));
 
-        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref prevCameraData, ref transformToPrevTransform, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref textures);
+        SceneSerializer.InitializeSceneDataBuffers(cam, ref cameraData, ref prevCameraData, ref transformToPrevTransform, ref gameObjectDatasList, ref gameObjectDatas, ref aabbs, ref materialDatas, ref triangles, ref vertices, ref gaussians, ref albedoTextures, ref normalTextures, ref metallicSmoothnessTextures);
 
         // build and insert Hybrid Gaussian Renderer command buffer into `CameraEvent.AfterEverything`.
         // Unity handles resource dependency-based synchronization.
@@ -132,7 +143,9 @@ public class HybridGaussianRenderer : MonoBehaviour
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "vertices", vertices);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "materialDatas", materialDatas);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "gaussians", gaussians);
-                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "textures", textures);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "albedoTextures", albedoTextures);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "normalTextures", normalTextures);
+                commandBuffer.SetComputeTextureParam(getPathIntersections, kernelIndex, "metallicSmoothnessTextures", metallicSmoothnessTextures);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathHitRecords", pathHitRecords);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "pathsContinueTmpCounter", pathsContinueTmpCounter);
                 commandBuffer.SetComputeBufferParam(getPathIntersections, kernelIndex, "sortedHitsBuffer", sortedHitsBuffer);
@@ -317,10 +330,20 @@ public class HybridGaussianRenderer : MonoBehaviour
             vertices.Release();
             vertices = null;
         }
-        if (textures != null)
+        if (albedoTextures != null)
         {
-            Destroy(textures);
-            textures = null;
+            Destroy(albedoTextures);
+            albedoTextures = null;
+        }
+        if (normalTextures != null)
+        {
+            Destroy(normalTextures);
+            normalTextures = null;
+        }
+        if (metallicSmoothnessTextures != null)
+        {
+            Destroy(metallicSmoothnessTextures);
+            metallicSmoothnessTextures = null;
         }
         if (gaussians != null)
         {

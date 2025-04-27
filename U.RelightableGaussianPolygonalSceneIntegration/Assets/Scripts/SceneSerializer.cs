@@ -1,11 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class SceneSerializer : MonoBehaviour
 {
-    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref CameraData prevCameraData, ref Dictionary<Transform, SimpleTransform> transformToPrevTransform, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray texture2DArray)
+    public static void InitializeSceneDataBuffers(in Camera cam, ref ComputeBuffer cameraData, ref CameraData prevCameraData, ref Dictionary<Transform, SimpleTransform> transformToPrevTransform, ref List<GameObjectData> gameObjectDatas, ref ComputeBuffer gameObjectDatasBuffer, ref ComputeBuffer aabbsBuffer, ref ComputeBuffer materialDatasBuffer, ref ComputeBuffer trianglesBuffer, ref ComputeBuffer verticesBuffer, ref ComputeBuffer gaussiansBuffer, ref Texture2DArray albedoTexture2DArray, ref Texture2DArray normalTexture2DArray, ref Texture2DArray metallicSmoothnessTexture2DArray)
     {
         // init camera buffer
         cameraData = new ComputeBuffer(1, Marshal.SizeOf(typeof(CameraData)));
@@ -15,7 +15,9 @@ public class SceneSerializer : MonoBehaviour
         List<Triangle> triangles = new List<Triangle>();
         List<Vertex> vertices = new List<Vertex>();
         List<MaterialData> materialDatas = new List<MaterialData>();
-        List<Texture2D> textures = new List<Texture2D>();
+        List<Texture2D> albedoTextures = new List<Texture2D>();
+        List<Texture2D> normalTextures = new List<Texture2D>();
+        List<Texture2D> metallicSmoothnessTextures = new List<Texture2D>();
         Dictionary<int, int> meshInstanceToAABB = new Dictionary<int, int>();
         Dictionary<int, int> materialInstanceToMaterialData = new Dictionary<int, int>();
 
@@ -49,7 +51,7 @@ public class SceneSerializer : MonoBehaviour
                     Vertex v;
                     v.position = mesh.vertices[i];
                     v.normal = mesh.normals[i];
-                    v.albedoUV = mesh.uv[i];
+                    v.uv = mesh.uv[i];
                     vertices.Add(v);
                 }
 
@@ -72,20 +74,11 @@ public class SceneSerializer : MonoBehaviour
 
                 MaterialData materialData = new MaterialData();
 
-                MaterialType materialType = MaterialType.Diffuse;
+                uint materialType = 0u;
                 Material mat = meshRenderer.sharedMaterial;
 
                 // albedo
                 Color albedo = mat.GetColor("_Color");
-
-                // albedo texture
-                Texture2D albedoTexture = mat.GetTexture("_MainTex") as Texture2D;
-                if (albedoTexture != null)
-                {
-                    materialType = MaterialType.Textured;
-                    materialData.albedoTextureIndex = (uint) textures.Count;
-                    textures.Add(albedoTexture);
-                }
 
                 // emission
                 if (mat.IsKeywordEnabled("_EMISSION"))
@@ -93,14 +86,41 @@ public class SceneSerializer : MonoBehaviour
                     Color emissionColor = mat.GetColor("_EmissionColor");
                     if (emissionColor != Color.black)
                     {
-                        materialType = MaterialType.Emissive;
+                        materialType |= (uint) MaterialType.IsEmissive;
                         albedo = emissionColor;
                     }
                 }
 
-                materialData.type = materialType;
                 materialData.albedo = new Vector4(albedo.r, albedo.g, albedo.b, albedo.a);
- 
+
+                // albedo texture
+                Texture2D albedoTexture = mat.GetTexture("_MainTex") as Texture2D;
+                if (albedoTexture != null)
+                {
+                    materialType |= (uint) MaterialType.HasAlbedoTex;
+                    materialData.albedoTextureIndex = (uint) albedoTextures.Count;
+                    albedoTextures.Add(albedoTexture);
+                }
+
+                // normal texture
+                Texture2D normalTexture = mat.GetTexture("_BumpMap") as Texture2D;
+                if (normalTexture != null)
+                {
+                    materialType |= (uint) MaterialType.HasNormalTex;
+                    materialData.normalTextureIndex = (uint) normalTextures.Count;
+                    normalTextures.Add(normalTexture);
+                }
+
+                // metallic smoothness texture
+                Texture2D metallicSmoothnessTexture = mat.GetTexture("_MetallicGlossMap") as Texture2D;
+                if (metallicSmoothnessTexture != null)
+                {
+                    materialType |= (uint) MaterialType.HasMetallicSmoothnessTex;
+                    materialData.metallicSmoothnessTextureIndex = (uint) metallicSmoothnessTextures.Count;
+                    metallicSmoothnessTextures.Add(metallicSmoothnessTexture);
+                }
+
+                materialData.type = materialType;
                 materialDatas.Add(materialData);
             }
             else
@@ -149,6 +169,11 @@ public class SceneSerializer : MonoBehaviour
         {
             materialDatasBuffer = new ComputeBuffer(1, sizeof(uint));
         }
+
+        // create texture 2D arrays
+        CreateTextureArray2D(ref albedoTexture2DArray, albedoTextures, TextureFormat.DXT1, false);
+        CreateTextureArray2D(ref normalTexture2DArray, normalTextures, TextureFormat.RGBAHalf, true);
+        CreateTextureArray2D(ref metallicSmoothnessTexture2DArray, metallicSmoothnessTextures, TextureFormat.RGBAHalf, true);
 
         // create Gaussian data
         List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
@@ -204,25 +229,6 @@ public class SceneSerializer : MonoBehaviour
             aabbsBuffer = new ComputeBuffer(aabbs.Count, Marshal.SizeOf(typeof(AABB)));
             aabbsBuffer.SetData(aabbs);
         }
-
-        // create texture 2D array
-        texture2DArray = null;
-        if (textures.Count > 0)
-        {
-            int texWidth = textures[0].width;
-            int texHeight = textures[0].width;
-            int texCount = textures.Count;
-            TextureFormat texFormat = textures[0].format;
-            texture2DArray = new Texture2DArray(texWidth, texHeight, texCount, texFormat, false)
-            {
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Repeat
-            };
-            for (int i = 0; i < texCount; i++)
-            {
-                Graphics.CopyTexture(textures[i], 0, 0, texture2DArray, i, 0);
-            }
-        }
     }
 
     public static void SetCameraDataBuffer(in Vector4 camPos, in Quaternion camRot, ref ComputeBuffer cameraData, ref CameraData prevCameraData)
@@ -233,5 +239,33 @@ public class SceneSerializer : MonoBehaviour
             quaternion = camRot
         };
         cameraData.SetData(new CameraData[]{prevCameraData});
+    }
+
+    private static void CreateTextureArray2D(ref Texture2DArray texture2DArray, in List<Texture2D> textures, TextureFormat format, bool linear)
+    {
+        if (textures.Count <= 0)
+        {
+            texture2DArray = null;
+            return;
+        }
+
+        int texCount = textures.Count;
+        int texWidth = textures[0].width;
+        int texHeight = textures[0].width;
+        texture2DArray = new Texture2DArray(texWidth, texHeight, texCount, format, false, linear)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Repeat
+        };
+
+        for (int i = 0; i < texCount; i++)
+        {
+            Texture2D currTex = textures[i];
+            if (currTex.width != texWidth || currTex.height != texHeight)
+            {
+                Debug.LogError($"TEXTURE SIZE MISMATCH! Texture Size: {currTex.width}x{currTex.height}   Texture2D Array Size: {texWidth}x{texHeight}");
+            }
+            Graphics.CopyTexture(currTex, 0, 0, texture2DArray, i, 0);
+        }
     }
 }

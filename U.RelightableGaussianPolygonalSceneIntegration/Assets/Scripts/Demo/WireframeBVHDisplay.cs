@@ -40,7 +40,7 @@ public class WireframeBVHDisplay : MonoBehaviour
                     Vertex v;
                     v.position = meshFilter.mesh.vertices[i];
                     v.normal = meshFilter.mesh.normals[i];
-                    v.albedoUV = meshFilter.mesh.uv[i];
+                    v.uv = meshFilter.mesh.uv[i];
                     vertices.Add(v);
                 }
 

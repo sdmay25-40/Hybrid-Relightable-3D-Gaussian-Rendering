@@ -11,8 +11,12 @@ StructuredBuffer<Triangle> triangles;
 StructuredBuffer<Vertex> vertices;
 StructuredBuffer<MaterialData> materialDatas;
 StructuredBuffer<Gaussian> gaussians;
-Texture2DArray<float4> textures;
-SamplerState samplertextures;
+Texture2DArray<float4> albedoTextures;
+Texture2DArray<float4> normalTextures;
+Texture2DArray<float4> metallicSmoothnessTextures;
+SamplerState sampleralbedoTextures;
+SamplerState samplernormalTextures;
+SamplerState samplermetallicSmoothnessTextures;
 RWStructuredBuffer<PathHitRecord> pathHitRecords;
 RWStructuredBuffer<uint> pathsContinueTmpCounter;
 RWStructuredBuffer<PathHitRecord> sortedHitsBuffer;
@@ -160,9 +164,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                         gauss.color.w = opacity;
 
                         tmpHit.t = t;
-                        tmpHit.materialType = MATERIAL_EMISSIVE;
+                        tmpHit.materialType = MATERIAL_IS_EMISSIVE;
                         tmpHit.albedo = gauss.color;
                         tmpHit.normal = normalize(rx - gauss.pos);
+                        tmpHit.metallic = 0;
+                        tmpHit.smoothness = 0;
 
                         insertionSortAndCull(id.x, hitCount, tmpHit);
                     }
@@ -216,19 +222,44 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                             MaterialData mat = materialDatas[currGameObj.materialIndex];
                             tmpHit.materialType = mat.type;
 
+                            // albedo
                             float w = 1 - u - v;
-                            if (mat.type != MATERIAL_TEXTURED)
+                            float2 uv = vertices[tri.v0].uv * w + vertices[tri.v1].uv * u + vertices[tri.v2].uv * v;
+                            if (mat.type & MATERIAL_HAS_ALBEDO_TEX)
                             {
-                                tmpHit.albedo = mat.albedo;
+                                tmpHit.albedo = albedoTextures.SampleLevel(sampleralbedoTextures, float3(uv, mat.albedoTextureIndex), 0) * mat.albedo;
                             }
                             else
                             {
-                                float2 albedoUV = vertices[tri.v0].albedoUV * w + vertices[tri.v1].albedoUV * u + vertices[tri.v2].albedoUV * v;
-                                tmpHit.albedo = textures.SampleLevel(samplertextures, float3(albedoUV, mat.albedoTextureIndex), 0) * mat.albedo;
+                                tmpHit.albedo = mat.albedo;
                             }
+                           
+                            // normal
+                            float3 normal;
+                            if (mat.type & MATERIAL_HAS_NORMAL_TEX)
+                            {
+                                normal = normalTextures.SampleLevel(samplernormalTextures, float3(uv, mat.normalTextureIndex), 0).xyz;
+                                normal = normalize(normal * 2.0 - 1.0);
+                            }
+                            else
+                            {
+                                normal = normalize(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v);
+                            }
+                            float4 normalWorldSpace = mul(currGameObj.normalMatrix, float4(normal, 0));
+                            tmpHit.normal = normalize(normalWorldSpace.xyz);
 
-                            float4 normal = mul(currGameObj.normalMatrix, float4(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v, 0));
-                            tmpHit.normal = normalize(normal.xyz);
+                            // metallic/smoothness
+                            if (mat.type & MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX)
+                            {
+                                float4 sample = metallicSmoothnessTextures.SampleLevel(samplermetallicSmoothnessTextures, float3(uv, mat.metallicSmoothnessTextureIndex),0);
+                                tmpHit.metallic = sample.r;
+                                tmpHit.smoothness = sample.a;
+                            }
+                            else
+                            {
+                                tmpHit.metallic = 0;
+                                tmpHit.smoothness = 0;
+                            }
 
                             insertionSortAndCull(id.x, hitCount, tmpHit);
                         }
@@ -247,21 +278,24 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         PathHitRecord lastHit = sortedHitsBuffer[hitCount-1 + (id.x * MAX_HIT)];
         tmpHit.t = lastHit.t;
-        tmpHit.materialType = MATERIAL_DIFFUSE;
+        tmpHit.materialType = lastHit.materialType;
         tmpHit.albedo = float4(0,0,0,0);
         tmpHit.normal = lastHit.normal;
+        tmpHit.metallic = 0;
+        tmpHit.smoothness = 0;
 
         float accumulatedTransmittance = 1.0;
         for (uint hitIdx = 0; hitIdx < hitCount; hitIdx++)
         {
             PathHitRecord currHit = sortedHitsBuffer[hitIdx + (id.x * MAX_HIT)];
-            if (currHit.materialType == MATERIAL_EMISSIVE)
-            {
-                tmpHit.materialType = MATERIAL_EMISSIVE;
-            }
 
-            tmpHit.albedo += (currHit.albedo * currHit.albedo.w) * accumulatedTransmittance;
-            accumulatedTransmittance *= (1 - currHit.albedo.w);
+            float opacity = currHit.albedo.w;
+            float weight = opacity * accumulatedTransmittance;
+            tmpHit.albedo += float4(currHit.albedo.xyz * weight, 1);
+            tmpHit.metallic += currHit.metallic * weight;
+            tmpHit.smoothness += currHit.smoothness * weight;
+
+            accumulatedTransmittance *= (1 - opacity);
         }
 
         pathHitRecords[pathId] = tmpHit;
