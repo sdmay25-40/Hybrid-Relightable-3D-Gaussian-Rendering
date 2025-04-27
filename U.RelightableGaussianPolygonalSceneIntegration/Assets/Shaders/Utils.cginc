@@ -14,7 +14,6 @@
 #define MAX_HIT 10
 #define MIN_OPACITY 0.01
 #define T_MIN 0.001
-#define L_MAX 2
 #define SHC_RED_START 0
 #define SHC_GREEN_START 9
 #define SHC_BLUE_START 18

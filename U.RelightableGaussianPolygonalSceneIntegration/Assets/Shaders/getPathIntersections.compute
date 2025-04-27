@@ -82,6 +82,8 @@ float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointOb
 
     uint coefficientIndexCounter = 0;
 
+    // I originally had this as a loop but the compiler was breaking it when they 
+    // unrolled.
     shColor += sphericalHarmonicsForLM(0, 0, coefficients, theta, phi, coefficientIndexCounter);
     coefficientIndexCounter++;
 
