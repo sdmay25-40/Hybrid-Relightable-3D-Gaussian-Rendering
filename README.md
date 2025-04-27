@@ -62,10 +62,11 @@ pip install plyfile ipython torch
 
 ```mermaid
 graph TD
-A[Video] --> B[COLMAP SfM + MVS]
-B --> C[Initial Point Cloud]
-C --> D[Gaussian Scene Optimization (PyTorch)]
-D --> E[Unity Hybrid Renderer]
+    A["Video"] --> B["COLMAP SfM + MVS"]
+    B --> C["Initial Point Cloud"]
+    C --> D["Gaussian Scene Optimization (PyTorch)"]
+    D --> E["Unity Hybrid Renderer"]
+
 ```
 
 ---
