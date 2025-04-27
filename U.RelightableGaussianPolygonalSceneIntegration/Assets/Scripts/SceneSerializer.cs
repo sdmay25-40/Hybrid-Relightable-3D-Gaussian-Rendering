@@ -155,8 +155,9 @@ public class SceneSerializer : MonoBehaviour
         GaussianScrpt[] gaussianScrpts = FindObjectsOfType<GaussianScrpt>();
         foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
         {
-            Gaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
-            
+            Gaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath, gaussianScrpt.GetGScale());
+        
+
             GameObjectData currGameObj = new GameObjectData();
             Transform transform = gaussianScrpt.gameObject.transform;
             currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
@@ -178,14 +179,6 @@ public class SceneSerializer : MonoBehaviour
 
             foreach (Gaussian3D g in gaussiansTmp)
             {   
-                /*
-                AABB aabb = new AABB();
-                aabb.primitiveType = PrimType.Gaussian;
-                aabb.primitiveStartIndex = (uint)gaussians.Count;
-                aabb.primitiveCount = 1u;
-                aabbs.Add(aabb);
-                */
-
                 gaussians.Add(g);
             }
 

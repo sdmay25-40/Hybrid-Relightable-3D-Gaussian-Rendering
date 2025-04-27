@@ -355,7 +355,8 @@ public static class BuildBVH
         /* Algorithm: Find standard deviation for each dimension * it by 1 + % of data to capture.
         Then use that to find min/max
         */   
-        Matrix<float> covAsMathNetMatrix = ConvertCovMatrixToMathNetMatrix(gaussian.cov);
+        Matrix4x4 cov = Utils.CovFromScaleSqrd(gaussian.scaleSqrd);
+        Matrix<float> covAsMathNetMatrix = ConvertCovMatrixToMathNetMatrix(cov);
         // There's an argument for writing this ourselves but it wouldn't be fun
         Evd<float> evd = covAsMathNetMatrix.Evd();
 

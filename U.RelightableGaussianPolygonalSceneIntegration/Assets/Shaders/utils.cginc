@@ -94,11 +94,10 @@ struct Vertex
 struct Gaussian
 {
     float3 pos;
-    float4x4 cov;
-    float4x4 invCov;
-    float4 color;
+    float4 scaleSqrd;
     float shCoefficients[27];
-    float2 padding;
+    float opacity;
+    float padding;
 };
 
 uint getLinearPixelIndex(uint2 id, int screenWidth)
@@ -223,14 +222,13 @@ float3 randCosHemisphereSample(float3 normal, float2 uv, int seed)
     return sampleTangentSpace.x * tangent + sampleTangentSpace.y * bitangent + sampleTangentSpace.z * normal;
 }
 
-// Handle exponets with a negative base
-float nPow(float f, float e)
-{
-    int s = 1;
-    if (f<0 && ((uint) abs(e)) % 2 == 1)
-    {
-        s = -1;
-    }
-    float res = pow(abs(f), e);
-    return (res * s);
+float4x4 covFromScalceScqrd(float4 scaleSqrd){
+    return float4x4(scaleSqrd.x, 0, 0, 0, 0, scaleSqrd.y, 0, 0, 0, 0, scaleSqrd.z, 0, 0, 0, 0, scaleSqrd.w);
 }
+
+float4x4 invCovFromScalceScqrd(float4 scaleSqrd){
+    float4 s = 1 / scaleSqrd;
+    return float4x4(s.x, 0, 0, 0, 0, s.y, 0, 0, 0, 0, s.z, 0, 0, 0, 0, s.w);
+}
+
+

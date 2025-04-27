@@ -5,28 +5,9 @@ using System.Linq;
 using UnityEngine;
 
 
-public static class GaussianHelper{
-    // Size of the PasssableGaussian3D type
-    public static int GaussianStructSize 
-    {
-        get { return (2 * 3 * sizeof(float)) +
-            (4 * sizeof(float)) +
-            (2 * 16 * sizeof(float))  +
-            (7 * sizeof(float)) + 
-            (3 * sizeof(uint)); 
-        }
-    }
-
-
-}
-
 public struct Gaussian3D{
     public Vector3 pos;
-    public Matrix4x4 cov;
-    public Matrix4x4 invCov;
-    // This is composed of shCoefficient0, shCoefficient9, and shCoefficient18
-    public Vector4 color;
-        
+    public Vector4 scaleSqrd;
     // Spherical Harmonics Coefficients
     public float shCoefficient0;
     public float shCoefficient1;
@@ -55,7 +36,8 @@ public struct Gaussian3D{
     public float shCoefficient24;
     public float shCoefficient25;
     public float shCoefficient26;
-    public Vector2 padding;
+    public float opacity;
+    public float padding;
 }
 
 public enum PlyFileFormat {
@@ -68,26 +50,13 @@ public enum PlyFileFormat {
 public class GaussianPlyParser 
 {
 
-    public static Matrix4x4 CreateCovarianceMatrix(Vector3 scale, Quaternion rot)
+    public static Gaussian3D CreateGaussian3D(Vector3 centerPos, Vector3 scale, 
+        float[] shCoefficients, float gaussOpacity)
     {
-        Matrix4x4 scaleMat = Matrix4x4.Scale(scale);
-        Matrix4x4 rotMat = Matrix4x4.Rotate(rot);
-
-
-        // Create covariance matrix from scale and rotation 
-       return rotMat * scaleMat * Matrix4x4.Transpose(scaleMat) * Matrix4x4.Transpose(rotMat);        
-    }
-
-    public static Gaussian3D CreateGaussian3D(Vector3 centerPos, Vector4 albedo, Vector3 scale, Quaternion rot, 
-        float[] shCoefficients)
-    {
-        Matrix4x4 covariance = CreateCovarianceMatrix(scale, rot);
         Gaussian3D p = new()
         {
             pos = centerPos,
-            color = albedo,
-            cov = covariance,
-            invCov = covariance.inverse,
+            scaleSqrd = new Vector4(scale.x * scale.x, scale.y * scale.y, scale.z * scale.z, 1),
 
             // Spherical Harmonics coefficents (This is a long block)
             shCoefficient0 = shCoefficients[0],
@@ -116,7 +85,8 @@ public class GaussianPlyParser
             shCoefficient23 = shCoefficients[23],
             shCoefficient24 = shCoefficients[24],
             shCoefficient25 = shCoefficients[25],
-            shCoefficient26 = shCoefficients[26]
+            shCoefficient26 = shCoefficients[26],
+            opacity = gaussOpacity
         };
 
         return p;
@@ -166,7 +136,7 @@ public class GaussianPlyParser
     //private static void ReadHeader(FileStream fs, ref )
     
     // Parse the Gaussian file this parser is pointed at
-    public Gaussian3D[] ReadFile(){
+    public Gaussian3D[] ReadFile(float constScale = 1.0f){
 
         using FileStream fs = File.OpenRead(pathToGaussianFile);
         using BinaryReader binaryReader = new BinaryReader(fs);
@@ -230,10 +200,10 @@ public class GaussianPlyParser
             ReadNextFloat(binaryReader, fileFormat);
             */
             
-            //Vector4 color = new Vector4(ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), 1);
 
             // Read spherical harmonics coefficients
-            float[] shCoefficients = new float[45];
+            
+            float[] shCoefficients = new float[27];
             for(int j =0; j < 27; j++){
                 shCoefficients[j] = ReadNextFloat(binaryReader, fileFormat);
             }
@@ -241,18 +211,16 @@ public class GaussianPlyParser
             // Read in scale and rotation
             Vector3 scale = new Vector3(ReadNextFloat(binaryReader, fileFormat), 
                 ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat));
-            //Quaternion rot = new Quaternion(ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat), ReadNextFloat(binaryReader, fileFormat));
-
-            Vector4 color = new Vector4(shCoefficients[0], shCoefficients[9], shCoefficients[18], 1);
+            scale *= constScale;
 
             // Read off opacity
-            ReadNextFloat(binaryReader, fileFormat);
+            float opacity = ReadNextFloat(binaryReader, fileFormat);
         
-            Gaussian3D g = CreateGaussian3D(pos, color, scale, new Quaternion(0, 0, 0, 0), shCoefficients);
+            Gaussian3D g = CreateGaussian3D(pos, scale, shCoefficients, opacity);
 
             gaussians.Add(g);
         }
-
+        Debug.Log(gaussians.Count);
         return gaussians.ToArray();
     }
 
@@ -261,4 +229,12 @@ public class GaussianPlyParser
         GaussianPlyParser parser = new GaussianPlyParser(pathToGaussianFile);
         return parser.ReadFile();
     }
+
+    // Read in a Gaussian .ply file and return its results as Gaussian3D objects
+    public static Gaussian3D[] ReadGaussianFile(string pathToGaussianFile, float scaleConst){
+        GaussianPlyParser parser = new GaussianPlyParser(pathToGaussianFile);
+        return parser.ReadFile(scaleConst);
+    }
+
+
 }

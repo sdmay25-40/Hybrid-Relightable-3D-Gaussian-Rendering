@@ -38,7 +38,6 @@ public class HybridGaussianRenderer : MonoBehaviour
     private ComputeBuffer gaussians;
     private ComputeBuffer sortedHitsBuffer;
     private List<GameObjectData> gameObjectDatasList = new List<GameObjectData>();
-    private int numPaths;
     private Dictionary<Transform, SimpleTransform> transformToPrevTransform = new Dictionary<Transform, SimpleTransform>();
     private CameraData prevCameraData;
 
@@ -67,7 +66,6 @@ public class HybridGaussianRenderer : MonoBehaviour
         currentFrameBuffer = new ComputeBuffer(Screen.width * Screen.height, sizeof(uint) * 3);
 
         int pathCount = Screen.width * Screen.height * pathsPerPixel;
-        numPaths = pathCount;
         paths = new ComputeBuffer(pathCount,  Marshal.SizeOf(typeof(PathPayload)));
         pathHitRecords = new ComputeBuffer(pathCount, Marshal.SizeOf(typeof(PathHitRecord)));
         pathsContinueCounter = new ComputeBuffer(pathCount, sizeof(uint), ComputeBufferType.Counter);

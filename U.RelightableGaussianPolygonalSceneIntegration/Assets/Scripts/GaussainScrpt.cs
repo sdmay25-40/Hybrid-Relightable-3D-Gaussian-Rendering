@@ -9,6 +9,17 @@ public class GaussianScrpt : MonoBehaviour
     [Tooltip("Drop a Gaussian *.ply file here")]
     [SerializeField]
     private DefaultAsset gaussianFile;
+
+    [Header("References")]
+    [Tooltip("Scale applied to gaussians individually.")]
+    [SerializeField]
+    private float gaussianSpaceScale = 1.0f;
+
+
+    public float GetGScale(){
+        return gaussianSpaceScale;
+    }
+
     private string filePath;
     public string FilePath
     {
