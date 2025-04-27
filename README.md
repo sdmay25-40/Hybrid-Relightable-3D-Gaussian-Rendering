@@ -2,7 +2,7 @@
 # Hybrid Relightable 3D Gaussian Rendering README  
 Team 40 – Senior Design May 2025  
 Jackson Vanderheyden (Graphics Scope Manager), Brian Xicon (Machine Learning Scope Manager), Luke Broglio (Schedule Manager), Ethan Gasner (Documentation Manager), Kyle Kohl (Communication Manager), <br>  
-| [Project Page](https://sdmay25-40.sd.ece.iastate.edu/)| [Demo Video (coming soon)](#) | [Final Report (coming soon)](#) | [Unity Plugin (WIP)](#) |<br>  
+| [Project Page](https://sdmay25-40.sd.ece.iastate.edu/)|<br>  
 ![Teaser](CornellBox.png)
 
 This repository contains the official implementation of our senior design project **Hybrid Relightable 3D Gaussian Rendering**, which enables high-quality 3D models to be reconstructed from video using AI. Our system converts video into realistic, relightable 3D Gaussian models that can be seamlessly used within the Unity Game Engine. Users can place and transform these models alongside Unity-supported objects, enabling intuitive scene authoring.
@@ -25,7 +25,7 @@ This repository contains the official implementation of our senior design projec
     Must have the torch libary installed 
 
     Must have Unity installed on your computer.
-      This to generating the 3D Gaussians, rendering does not require this. 
+      This is for generating the 3D Gaussians, rendering does not require this. 
 
 ```
 ### Hardware Requirements:
@@ -102,7 +102,7 @@ Assets/
 ## Usage
 
 1. Start a new Unity project
-1. Add our project as a Unity Asset from the [Unity Asset Store.](Stuff)
+1. Add our project as a Unity Asset from the [Unity Asset Store.](https://assetstore.unity.com/?srsltid=AfmBOopmn0X6VALSruZEQJMtL-55UQVQts2TmAIOy4t4K6ZpyPE9UVjZ)
 1. Take the video files you desire to turn into a 3D model and drag them to the BLANK folder in the unity project folder.
 1. Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the BLANK folder. 
 1. ANY Other instructions for Running our project.
