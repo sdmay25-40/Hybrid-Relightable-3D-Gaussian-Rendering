@@ -249,16 +249,9 @@ public class SceneSerializer : MonoBehaviour
             return;
         }
 
-        // get largest texture size
         int texCount = textures.Count;
         int texWidth = textures[0].width;
         int texHeight = textures[0].width;
-        for (int i = 1; i < textures.Count; i++)
-        {
-            texWidth = Math.Max(texWidth, textures[i].width);
-            texHeight = Math.Max(texHeight, textures[i].height);
-        }
-
         texture2DArray = new Texture2DArray(texWidth, texHeight, texCount, format, false, linear)
         {
             filterMode = FilterMode.Bilinear,
@@ -270,7 +263,7 @@ public class SceneSerializer : MonoBehaviour
             Texture2D currTex = textures[i];
             if (currTex.width != texWidth || currTex.height != texHeight)
             {
-                Debug.LogError($"TEXTURE SIZE MISMATCH! Texture Size: {currTex.width}x{currTex.height}   Largest Texture Size: {texWidth}x{texHeight}");
+                Debug.LogError($"TEXTURE SIZE MISMATCH! Texture Size: {currTex.width}x{currTex.height}   Texture2D Array Size: {texWidth}x{texHeight}");
             }
             Graphics.CopyTexture(currTex, 0, 0, texture2DArray, i, 0);
         }
