@@ -235,19 +235,18 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                             }
                            
                             // normal
+                            float3 normal;
                             if (mat.type & MATERIAL_HAS_NORMAL_TEX)
                             {
-                                float3 normal = normalTextures.SampleLevel(samplernormalTextures, float3(uv, mat.normalTextureIndex), 0).xyz;
+                                normal = normalTextures.SampleLevel(samplernormalTextures, float3(uv, mat.normalTextureIndex), 0).xyz;
                                 normal = normalize(normal * 2.0 - 1.0);
-                                float4 normalWorldSpace = mul(currGameObj.normalMatrix, float4(normal, 0));
-                                tmpHit.normal = normalize(normalWorldSpace.xyz);
                             }
                             else
                             {
-                                float3 normal = normalize(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v);
-                                float4 normalWorldSpace = mul(currGameObj.normalMatrix, float4(normal, 0));
-                                tmpHit.normal = normalize(normalWorldSpace.xyz);
+                                normal = normalize(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v);
                             }
+                            float4 normalWorldSpace = mul(currGameObj.normalMatrix, float4(normal, 0));
+                            tmpHit.normal = normalize(normalWorldSpace.xyz);
 
                             // metallic/smoothness
                             if (mat.type & MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX)
@@ -279,7 +278,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         PathHitRecord lastHit = sortedHitsBuffer[hitCount-1 + (id.x * MAX_HIT)];
         tmpHit.t = lastHit.t;
-        tmpHit.materialType = 0;
+        tmpHit.materialType = lastHit.materialType;
         tmpHit.albedo = float4(0,0,0,0);
         tmpHit.normal = lastHit.normal;
         tmpHit.metallic = 0;
@@ -289,14 +288,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         for (uint hitIdx = 0; hitIdx < hitCount; hitIdx++)
         {
             PathHitRecord currHit = sortedHitsBuffer[hitIdx + (id.x * MAX_HIT)];
-            tmpHit.materialType |= currHit.materialType;
 
-            float weight = currHit.albedo.w * accumulatedTransmittance;
-            tmpHit.albedo += currHit.albedo * weight;
+            float opacity = currHit.albedo.w;
+            float weight = opacity * accumulatedTransmittance;
+            tmpHit.albedo += float4(currHit.albedo.xyz * weight, 1);
             tmpHit.metallic += currHit.metallic * weight;
             tmpHit.smoothness += currHit.smoothness * weight;
 
-            accumulatedTransmittance *= (1 - currHit.albedo.w);
+            accumulatedTransmittance *= (1 - opacity);
         }
 
         pathHitRecords[pathId] = tmpHit;

@@ -171,11 +171,8 @@ public class SceneSerializer : MonoBehaviour
         }
 
         // create texture 2D arrays
-        Debug.Log("ALBEDO");
         CreateTextureArray2D(ref albedoTexture2DArray, albedoTextures, TextureFormat.DXT1, false);
-        Debug.Log("NORMAL");
         CreateTextureArray2D(ref normalTexture2DArray, normalTextures, TextureFormat.RGBAHalf, true);
-        Debug.Log("MET/SMOOTH");
         CreateTextureArray2D(ref metallicSmoothnessTexture2DArray, metallicSmoothnessTextures, TextureFormat.RGBAHalf, true);
 
         // create Gaussian data
@@ -273,9 +270,7 @@ public class SceneSerializer : MonoBehaviour
             Texture2D currTex = textures[i];
             if (currTex.width != texWidth || currTex.height != texHeight)
             {
-                Debug.LogError("Texture size doesn't match");
-                // TODO: write a resize texture function
-                // users needs to ensure format is the same otherwise
+                Debug.LogError($"TEXTURE SIZE MISMATCH! Texture Size: {currTex.width}x{currTex.height}   Largest Texture Size: {texWidth}x{texHeight}");
             }
             Graphics.CopyTexture(currTex, 0, 0, texture2DArray, i, 0);
         }
