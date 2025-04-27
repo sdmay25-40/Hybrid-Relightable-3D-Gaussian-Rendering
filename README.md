@@ -65,7 +65,7 @@ graph TD
 A[Video] --> B[COLMAP SfM + MVS]
 B --> C[Initial Point Cloud]
 C --> D[Gaussian Scene Optimization (PyTorch)]
-D --> E1[Unity Hybrid Renderer]
+D --> E[Unity Hybrid Renderer]
 ```
 
 ---
