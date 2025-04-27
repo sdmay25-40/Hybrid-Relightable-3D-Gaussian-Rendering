@@ -43,7 +43,7 @@ Follow these [instructions](https://phoenixnap.com/kb/install-python-mac)  for M
 1. Verify pip is installed on Windows
 
 
-### 2. Install Colmapy
+### 2. Install Colmap
 Run this command in your terminal:
 ```
 pip install pycolmap 
