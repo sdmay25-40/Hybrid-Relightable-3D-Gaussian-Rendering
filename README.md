@@ -100,9 +100,9 @@ Assets/
 
 1. Start a new Unity project
 1. Add our project as a Unity Asset from the [Unity Asset Store.](https://assetstore.unity.com/?srsltid=AfmBOopmn0X6VALSruZEQJMtL-55UQVQts2TmAIOy4t4K6ZpyPE9UVjZ)
-1. Take the video files you desire to turn into a 3D model and drag them to the BLANK folder in the Unity project folder.
-1. Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the BLANK folder. 
-1. ANY Other instructions for Running our project.
+1. Hit play in Unity, this may take a while depending on the length of your video. The generated 3D model should be outputted to the ouput folder. 
+1. When prompted, select the video files you desire to turn into a 3D model.
+1. The progress of the render is outputed to the Unity Console. 
 
 
 ## BibTeX
