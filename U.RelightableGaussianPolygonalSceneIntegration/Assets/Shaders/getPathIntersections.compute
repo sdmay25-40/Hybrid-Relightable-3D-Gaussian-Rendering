@@ -1,5 +1,6 @@
 #pragma kernel CSMain
 #include "Utils.cginc"
+#include "sh.cginc"
 
 StructuredBuffer<PathPayload> paths;
 StructuredBuffer<uint> pathsContinueCounter;
@@ -22,13 +23,64 @@ RWStructuredBuffer<uint> pathsContinueTmpCounter;
 RWStructuredBuffer<PathHitRecord> sortedHitsBuffer;
 RWStructuredBuffer<uint> stackBuffer;
 
-// TODO: Is this equivalent to the opacity function?
 /// <source> Sect. 3.1, Eq. 1 https://arxiv.org/pdf/2311.16043#page.4 </source>
 float opacityAtPoint(float3 pos, Gaussian gauss){
+    float4x4 invCov = invCovFromScalceScqrd(gauss.scaleSqrd);
+
     float4 pointToGaussianOrigin = float4((pos - gauss.pos), 1);
-    float4 invCovTimesPointToGaussianOrigin = mul(gauss.invCov, pointToGaussianOrigin);
+    float4 invCovTimesPointToGaussianOrigin = mul(invCov, pointToGaussianOrigin);
     float exponent = -0.5 * mul(transpose((float4x1)pointToGaussianOrigin), invCovTimesPointToGaussianOrigin);
     return pow(EULER_NUM, exponent);
+}
+
+float3 sphericalHarmonicsForLM(int l, int m, float coefficients[27], float3 v, 
+    float coefficientIndexCounter){
+
+    float shVal = shEval(l, m, v);
+    
+    // Add to total sum (The color)
+    float redComp = coefficients[SHC_RED_START + coefficientIndexCounter] * shVal;
+    float greenComp = coefficients[SHC_GREEN_START + coefficientIndexCounter] * shVal;
+    float blueComp = coefficients[SHC_BLUE_START + coefficientIndexCounter] * shVal;
+
+    return float3(redComp, greenComp, blueComp);
+}
+
+/// <summary> Calculate the color a gaussian is from a certain view direction 
+/// using spherical harmonics. </summary>
+float4 calcSphericalHarmonicsForPoint(float coefficients[27], float3 viewPointObjSpace, float3 gaussianCenter, float opacity){
+    float3 shSums = float3(0, 0, 0);
+
+    float3 diffVec = normalize(gaussianCenter - viewPointObjSpace);
+
+    uint coefficientIndexCounter = 0;
+
+    // I originally had this as a loop but the compiler was breaking it when they 
+    // unrolled.
+    shSums += sphericalHarmonicsForLM(0, 0, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    
+    shSums += sphericalHarmonicsForLM(1, -1, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    shSums += sphericalHarmonicsForLM(1, 0, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    shSums += sphericalHarmonicsForLM(1, 1, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+
+    shSums += sphericalHarmonicsForLM(2, -2, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    shSums += sphericalHarmonicsForLM(2, -1, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    shSums += sphericalHarmonicsForLM(2, 0, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    shSums += sphericalHarmonicsForLM(2, 1, coefficients, diffVec, coefficientIndexCounter);
+    coefficientIndexCounter+=1;
+    shSums += sphericalHarmonicsForLM(2, 2, coefficients, diffVec, coefficientIndexCounter);
+
+    shSums += float3(0.5, 0.5, 0.5);
+    float4 shColor = float4(shSums.xyz, opacity);
+
+    return shColor;
 }
 
 void insertionSortAndCull(uint idX, inout uint hitCount, PathHitRecord newHit)
@@ -138,137 +190,153 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             uint currAABBIndex = stackPop(stackSize, id.x);
             AABB aabb = aabbs[currAABBIndex];
 
-            if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
-            {
-                // maximum gaussian reponse Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
-                Gaussian gauss = gaussians[aabb.primitiveStartIndex];
-
-                float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
-                float4 covTimesPathDir = mul(gauss.cov, pathDirObjSpaceFlt4);
-
-                float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - pathOriginObjSpace), 1));
-                float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
-
-                float1x4 pathDirT = transpose((float4x1)pathDirObjSpaceFlt4);
-                float denominator = mul(pathDirT, covTimesPathDir);
-
-                float t = numerator / denominator;
-
-                if (t > 0)
-                {
-                    float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
-                    float opacity = opacityAtPoint(rx, gauss);
-
-                    if (opacity > MIN_OPACITY)
-                    {
-                        gauss.color.w = opacity;
-
-                        tmpHit.t = t;
-                        tmpHit.materialType = MATERIAL_IS_EMISSIVE;
-                        tmpHit.albedo = gauss.color;
-                        tmpHit.normal = normalize(rx - gauss.pos);
-                        tmpHit.metallic = 0;
-                        tmpHit.smoothness = 0;
-
-                        insertionSortAndCull(id.x, hitCount, tmpHit);
-                    }
-                }
-
-                break;
-            }
-
             if (rayAABBIntersect(pathOriginObjSpace, pathDirObjSpace, aabb))
             {
+
                 // leaf node intersection
                 if(aabb.primitiveCount < 4294967295U)
                 {
-                    // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-                    for (uint j = 0; j < aabb.primitiveCount; j++)
+
+                    if (aabb.primitiveType == PRIM_TYPE_GAUSSIAN)
                     {
-                        Triangle tri = triangles[aabb.primitiveStartIndex + j];
+                        // maximum gaussian reponse Relightable 3D Gaussians section 4.1, equation 14 https://arxiv.org/pdf/2311.16043#page.9
+                        Gaussian gauss = gaussians[aabb.primitiveStartIndex];
+                        float4x4 cov = covFromScalceScqrd(gauss.scaleSqrd);
 
-                        float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
-                        float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
-                        float3 p = cross(pathDirObjSpace, aToC);
+                        float4 pathDirObjSpaceFlt4 = float4(pathDirObjSpace,0);
+                        float4 covTimesPathDir = mul(cov, pathDirObjSpaceFlt4);
 
-                        float det  = dot(p, aToB);
-                        if (det < EPSILON)
-                        {
-                            continue;
-                        }
+                        float1x4 pathOriginToGaussianOriginT = transpose((float4x1)float4((gauss.pos - pathOriginObjSpace), 1));
+                        float numerator = mul(pathOriginToGaussianOriginT, covTimesPathDir);
 
-                        float invDet = rcp(det);
+                        float1x4 pathDirT = transpose((float4x1)pathDirObjSpaceFlt4);
+                        float denominator = mul(pathDirT, covTimesPathDir);
 
-                        float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
-                        float u = dot(p, aToOrigin) * invDet;
-                        if (u < 0 || u > 1)
-                        {
-                            continue; 
-                        }
+                        float t = numerator / denominator;
 
-                        float3 q = cross(aToOrigin, aToB);
-                        float v = dot(q, pathDirObjSpace) * invDet;
-                        if (v < 0 || u + v > 1)
-                        {
-                            continue;
-                        }
-
-                        float t = dot(q, aToC) * invDet;
-                        
                         if (t > 0)
                         {
-                            tmpHit.t = t;
+                            float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
+                            float opacity = opacityAtPoint(rx, gauss);
+                            opacity *= gauss.opacity;
+                            
+                            
+                            float3 pToO = rx - gauss.pos;
+                            float dist = length(pToO);
+                            
 
-                            MaterialData mat = materialDatas[currGameObj.materialIndex];
-                            tmpHit.materialType = mat.type;
+                            if (opacity > MIN_OPACITY )
+                            {
+                                //gauss.color.w = 1/*opacity * gauss.opacity*/;
+                                float4 gColor = float4(gauss.shCoefficients[0], gauss.shCoefficients[9], gauss.shCoefficients[18], 1);
 
-                            // albedo
-                            float w = 1 - u - v;
-                            float2 uv = vertices[tri.v0].uv * w + vertices[tri.v1].uv * u + vertices[tri.v2].uv * v;
-                            if (mat.type & MATERIAL_HAS_ALBEDO_TEX)
-                            {
-                                tmpHit.albedo = albedoTextures.SampleLevel(sampleralbedoTextures, float3(uv, mat.albedoTextureIndex), 0) * mat.albedo;
-                            }
-                            else
-                            {
-                                tmpHit.albedo = mat.albedo;
-                            }
-                           
-                            // normal
-                            float3 normal;
-                            if (mat.type & MATERIAL_HAS_NORMAL_TEX)
-                            {
-                                normal = normalTextures.SampleLevel(samplernormalTextures, float3(uv, mat.normalTextureIndex), 0).xyz;
-                                normal = normalize(normal * 2.0 - 1.0);
-                            }
-                            else
-                            {
-                                normal = normalize(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v);
-                            }
-                            float4 normalWorldSpace = mul(currGameObj.normalMatrix, float4(normal, 0));
-                            tmpHit.normal = normalize(normalWorldSpace.xyz);
+                                tmpHit.t = t;
+                                tmpHit.materialType = MATERIAL_IS_EMISSIVE  ;
+                                tmpHit.albedo = calcSphericalHarmonicsForPoint(gauss.shCoefficients, pathOriginObjSpace, gauss.pos, opacity);
+                                //tmpHit.albedo = float4(1, 1, 1, opacity);
+                                //tmpHit.albedo = float4(gColor.xyz, opacity);
+                                tmpHit.normal = normalize(rx - gauss.pos);
 
-                            // metallic/smoothness
-                            if (mat.type & MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX)
-                            {
-                                float4 sample = metallicSmoothnessTextures.SampleLevel(samplermetallicSmoothnessTextures, float3(uv, mat.metallicSmoothnessTextureIndex),0);
-                                tmpHit.metallic = sample.r;
-                                tmpHit.smoothness = sample.a;
+                                insertionSortAndCull(id.x, hitCount, tmpHit);
                             }
-                            else
-                            {
-                                tmpHit.metallic = 0;
-                                tmpHit.smoothness = 0;
-                            }
-
-                            insertionSortAndCull(id.x, hitCount, tmpHit);
                         }
+
                     }
+                    else{
+                       // ray-triangle intersection https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+                        for (uint j = 0; j < aabb.primitiveCount; j++)
+                        {
+                            Triangle tri = triangles[aabb.primitiveStartIndex + j];
+
+                            float3 aToB = vertices[tri.v1].position - vertices[tri.v0].position;
+                            float3 aToC = vertices[tri.v2].position - vertices[tri.v0].position;
+                            float3 p = cross(pathDirObjSpace, aToC);
+
+                            float det  = dot(p, aToB);
+                            if (det < EPSILON)
+                            {
+                                continue;
+                            }
+
+                            float invDet = rcp(det);
+
+                            float3 aToOrigin = pathOriginObjSpace - vertices[tri.v0].position;
+                            float u = dot(p, aToOrigin) * invDet;
+                            if (u < 0 || u > 1)
+                            {
+                                continue; 
+                            }
+
+                            float3 q = cross(aToOrigin, aToB);
+                            float v = dot(q, pathDirObjSpace) * invDet;
+                            if (v < 0 || u + v > 1)
+                            {
+                                continue;
+                            }
+
+                            float t = dot(q, aToC) * invDet;
+                            
+                            if (t > 0)
+                            {
+                                tmpHit.t = t;
+
+                                MaterialData mat = materialDatas[currGameObj.materialIndex];
+                                tmpHit.materialType = mat.type;
+
+                                // albedo
+                                float w = 1 - u - v;
+                                float2 uv = vertices[tri.v0].uv * w + vertices[tri.v1].uv * u + vertices[tri.v2].uv * v;
+                                if (mat.type & MATERIAL_HAS_ALBEDO_TEX)
+                                {
+                                    tmpHit.albedo = albedoTextures.SampleLevel(sampleralbedoTextures, float3(uv, mat.albedoTextureIndex), 0) * mat.albedo;
+                                }
+                                else
+                                {
+                                    tmpHit.albedo = mat.albedo;
+                                }
+                            
+                                // normal
+                                float3 normal;
+                                if (mat.type & MATERIAL_HAS_NORMAL_TEX)
+                                {
+                                    normal = normalTextures.SampleLevel(samplernormalTextures, float3(uv, mat.normalTextureIndex), 0).xyz;
+                                    normal = normalize(normal * 2.0 - 1.0);
+                                }
+                                else
+                                {
+                                    normal = normalize(vertices[tri.v0].normal * w + vertices[tri.v1].normal * u + vertices[tri.v2].normal * v);
+                                }
+                                float4 normalWorldSpace = mul(currGameObj.normalMatrix, float4(normal, 0));
+                                tmpHit.normal = normalize(normalWorldSpace.xyz);
+
+                                // metallic/smoothness
+                                if (mat.type & MATERIAL_HAS_METALLIC_SMOOTHNESS_TEX)
+                                {
+                                    float4 sample = metallicSmoothnessTextures.SampleLevel(samplermetallicSmoothnessTextures, float3(uv, mat.metallicSmoothnessTextureIndex),0);
+                                    tmpHit.metallic = sample.r;
+                                    tmpHit.smoothness = sample.a;
+                                }
+                                else
+                                {
+                                    tmpHit.metallic = 0;
+                                    tmpHit.smoothness = 0;
+                                }
+
+                                insertionSortAndCull(id.x, hitCount, tmpHit);
+                            }
+                        }
+
+                    }
+
+
                 }
                 else
                 {
                     stackPush(stackSize, id.x, aabb.leftChildIndex);
-                    stackPush(stackSize, id.x, aabb.rightChildIndex);
+                    // If this AABB has a right child
+                    if(aabb.rightChildIndex < 4294967295U){
+                        stackPush(stackSize, id.x, aabb.rightChildIndex);
+                    }
                 }
             }
         }

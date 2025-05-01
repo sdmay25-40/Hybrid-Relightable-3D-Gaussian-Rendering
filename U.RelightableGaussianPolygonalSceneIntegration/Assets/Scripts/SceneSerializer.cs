@@ -176,41 +176,42 @@ public class SceneSerializer : MonoBehaviour
         CreateTextureArray2D(ref metallicSmoothnessTexture2DArray, metallicSmoothnessTextures, TextureFormat.RGBAHalf, true);
 
         // create Gaussian data
-        List<BaseGaussian3D.PasssableGaussian3D> gaussians = new List<BaseGaussian3D.PasssableGaussian3D>();
+        List<Gaussian3D> gaussians = new List<Gaussian3D>();
         GaussianScrpt[] gaussianScrpts = FindObjectsOfType<GaussianScrpt>();
         foreach (GaussianScrpt gaussianScrpt in gaussianScrpts)
         {
-            BaseGaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath);
-            foreach (BaseGaussian3D g in gaussiansTmp)
+            Gaussian3D[] gaussiansTmp = GaussianPlyParser.ReadGaussianFile(gaussianScrpt.FilePath, gaussianScrpt.GetGScale());
+        
+
+            GameObjectData currGameObj = new GameObjectData();
+            Transform transform = gaussianScrpt.gameObject.transform;
+            currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
+            currGameObj.worldToObject = transform.worldToLocalMatrix;
+            // Make BVH for Gaussians 
+            uint rootIdx = BuildBVH.BuildBVHForGaussians(gaussiansTmp, ref aabbs, gaussians.Count);
+            
+            currGameObj.aabbRootIndex = rootIdx;
+            gameObjectDatas.Add(currGameObj);
+
+            SimpleTransform st = new SimpleTransform
             {
-                GameObjectData currGameObj = new GameObjectData();
-                Transform transform = gaussianScrpt.gameObject.transform;
-                currGameObj.normalMatrix = transform.localToWorldMatrix.inverse.transpose;
-                currGameObj.worldToObject = transform.worldToLocalMatrix;
-                currGameObj.aabbRootIndex = (uint)aabbs.Count;
-                gameObjectDatas.Add(currGameObj);
+                position = transform.position,
+                rotation = transform.rotation,
+                scale = transform.localScale
+            };
+            transformToPrevTransform.Add(transform, st);
 
-                SimpleTransform st = new SimpleTransform
-                {
-                    position = transform.position,
-                    rotation = transform.rotation,
-                    scale = transform.localScale
-                };
-                transformToPrevTransform.Add(transform, st);
-                
-                AABB aabb = new AABB();
-                aabb.primitiveType = PrimType.Gaussian;
-                aabb.primitiveStartIndex = (uint)gaussians.Count;
-                aabb.primitiveCount = 1u;
-                aabbs.Add(aabb);
 
-                gaussians.Add(g.GetPassableStruct());
+            foreach (Gaussian3D g in gaussiansTmp)
+            {   
+                gaussians.Add(g);
             }
+
         }
         
         if (gaussians.Count > 0)
         {
-            gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(BaseGaussian3D.PasssableGaussian3D)));
+            gaussiansBuffer = new ComputeBuffer(gaussians.Count, Marshal.SizeOf(typeof(Gaussian3D)));
             gaussiansBuffer.SetData(gaussians);
         }
         else

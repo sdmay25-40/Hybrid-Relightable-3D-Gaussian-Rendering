@@ -1,4 +1,6 @@
+using N = System.Numerics;
 using UnityEngine;
+using System.Collections.Generic;
 
 public enum PrimType : uint
 {
@@ -85,6 +87,20 @@ public struct Vertex
     public Vector2 uv;
 }
 
+public class MortonPayloadComp : IComparer<MortonPayload>
+{
+
+    public int Compare(MortonPayload x, MortonPayload y)
+    {
+        return x.mortonCode.CompareTo(y.mortonCode);
+    }
+}
+
+public struct MortonPayload{
+    public N.BigInteger mortonCode;
+    public int gaussianIdx;
+};
+
 public struct SimpleTransform
 {
     public Vector3 position;
@@ -101,5 +117,15 @@ public static class Utils
     {
         Vector3 pos = cam.transform.position;
         return new Vector4(pos.x, pos.y, pos.z, 1.0f);
+    }
+
+    public static Matrix4x4 CovFromScaleSqrd(Vector4 scaleSqrd){
+        Matrix4x4 cov = Matrix4x4.zero;
+        cov[0,0] = scaleSqrd[0]; 
+        cov[1,1] = scaleSqrd[1];
+        cov[2,2] = scaleSqrd[2];
+        cov[3,3] = scaleSqrd[3];
+
+        return cov;
     }
 }

@@ -1,11 +1,39 @@
 using System.Collections.Generic;
+// Needed to shorten use of big integer without introducing confusion between 
+// Unity and System types
+using N = System.Numerics; 
 using UnityEngine;
+using System;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Factorization;
+using Unity.Jobs;
+using Unity.Collections;
+using System.Linq;
 
 public static class BuildBVH 
 {   
     private const float COST_TRAV = 1;
     private const float COST_ITRSCT = 2;
     private const float NUM_DIVISIONS = 8;
+
+    public struct BoundingBoxCalcJob : IJobParallelFor
+    {
+        [ReadOnly]
+        public int bufferIdx;
+        [ReadOnly]
+        public NativeArray<Gaussian3D> gaussians;
+        [ReadOnly]
+        public NativeArray<int> idxsTreeOrder;
+
+
+        public NativeArray<AABB> result;
+
+        public void Execute(int index)
+        {
+            int idx = bufferIdx + idxsTreeOrder[index];
+            result[index] = CreateAABBForGaussian(gaussians[idx], (uint) (idx + bufferIdx));
+        }
+    }
 
     /// <summary>
     /// Calculate the total area of an Axis Aligned Bounding Box
@@ -261,4 +289,196 @@ public static class BuildBVH
 
         return (uint) (aabbList.Count - 1);
     }
+
+
+    /// <summary>
+    /// Expand the bits in a number to have gaps as part of morton code encoding.
+    /// </summary>
+    /// <source>https://www.forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations//</source>
+    private static N.BigInteger SplitBy3(int a){
+        N.BigInteger x = a;
+        x = (x | x << 32) & 0x1f00000000ffff; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+        x = (x | x << 16) & 0x1f0000ff0000ff; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+        x = (x | x << 8) & 0x100f00f00f00f00f; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+        x = (x | x << 4) & 0x10c30c30c30c30c3; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+        x = (x | x << 2) & 0x1249249249249249;
+
+        return x;
+    }
+
+    /// <summary>
+    /// Calculate the morton codes for all Gaussians 
+    /// </summary>
+    /// <source>https://www.forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/</source>
+    private static MortonPayload[] CalcMortonCodes(Gaussian3D[] gaussians){
+       MortonPayload[] mortonCodes = new MortonPayload[gaussians.Length];
+        for(int i = 0; i < gaussians.Length; i++){
+           Gaussian3D g = gaussians[i];
+            N.BigInteger x = SplitBy3((int) g.pos.x);
+            N.BigInteger y = SplitBy3((int) g.pos.y);
+            N.BigInteger z = SplitBy3((int) g.pos.z);
+
+            MortonPayload p;
+            p.mortonCode = x | y << 1 | z << 2;
+            p.gaussianIdx = i;
+
+            mortonCodes[i] = p;
+    
+        }
+
+        return mortonCodes;
+
+    }
+
+    /// <summary>
+    /// Convert a Gaussian's covariance matrix stored as a 4x4 Unity matrix to 
+    /// a 3x3 MathDotNet Matrix. 
+    /// </summary>
+    private static Matrix<float> ConvertCovMatrixToMathNetMatrix(Matrix4x4 toConvert){
+        Matrix<float> m = Matrix<float>.Build.Dense(3, 3);
+        for(int i = 0; i < 3; i++){
+            float[] row = {toConvert.GetRow(i).x, toConvert.GetRow(i).y, toConvert.GetRow(i).z};
+            m.SetRow(i, row);
+        }
+
+        return m;
+    }
+
+
+    private static AABB CreateAABBForGaussian(Gaussian3D gaussian, uint gaussianIdx){
+        AABB aabb = new AABB();
+        aabb.primitiveCount = 1u;
+        aabb.primitiveStartIndex = gaussianIdx;
+        aabb.primitiveType = PrimType.Gaussian;
+
+
+        /* Algorithm: Find standard deviation for each dimension * it by 1 + % of data to capture.
+        Then use that to find min/max
+        */   
+        Matrix4x4 cov = Utils.CovFromScaleSqrd(gaussian.scaleSqrd);
+        Matrix<float> covAsMathNetMatrix = ConvertCovMatrixToMathNetMatrix(cov);
+        // There's an argument for writing this ourselves but it wouldn't be fun
+        Evd<float> evd = covAsMathNetMatrix.Evd();
+
+        float standardDeviationX = MathF.Sqrt((float) evd.EigenValues[0].Real);
+        float standardDeviationY = MathF.Sqrt((float) evd.EigenValues[1].Real);
+        float standardDeviationZ = MathF.Sqrt((float) evd.EigenValues[2].Real);
+
+        // TODO: Make tightness of Gaussian Bounding boxes (The 3.0f here) configruable by the end user
+        Vector3 s1 = 3.0f * standardDeviationX * new Vector3(evd.EigenVectors.Column(0)[0], evd.EigenVectors.Column(0)[1],
+            evd.EigenVectors.Column(0)[2]);
+        Vector3 s2 = 3.0f * standardDeviationY * new Vector3(evd.EigenVectors.Column(1)[0], evd.EigenVectors.Column(1)[1],
+            evd.EigenVectors.Column(1)[2]);
+        Vector3 s3 = 3.0f * standardDeviationZ * new Vector3(evd.EigenVectors.Column(2)[0], evd.EigenVectors.Column(2)[1],
+            evd.EigenVectors.Column(2)[2]);
+
+
+        aabb.min = gaussian.pos - s1 - s2 - s3;
+        aabb.max = gaussian.pos + s1 + s2 + s3;
+        
+        return aabb;
+    }
+
+    private static void CreateParentNode(int leftIdx, int rightIdx, ref List<AABB> aabbs){
+        AABB aabb = new AABB();
+
+        aabb.primitiveCount = uint.MaxValue;
+        aabb.leftChildIndex = (uint) leftIdx;
+        aabb.rightChildIndex = (uint) rightIdx;   
+
+        aabb.min = Vector3.Min(aabbs[leftIdx].min, aabbs[rightIdx].min);
+        aabb.max = Vector3.Max(aabbs[leftIdx].max, aabbs[rightIdx].max);
+
+        aabbs.Add(aabb);
+    }
+
+    private static void BuildAABBsFromTree(MortonPayload[] mortonCodeTree, ref List<AABB> aabbs, 
+        Gaussian3D[] gaussians, int gaussianBufferIdx){
+
+        NativeArray<Gaussian3D> gaussiansNative = new NativeArray<Gaussian3D>(gaussians.Length, 
+            Allocator.Persistent);
+        NativeArray<int> idxsTreeOrder = new NativeArray<int>(mortonCodeTree.Length,
+            Allocator.Persistent); 
+        NativeArray<AABB> aabbsNative = new NativeArray<AABB>(gaussians.Length, 
+            Allocator.Persistent);
+
+        gaussiansNative.CopyFrom(gaussians);
+
+        for(int i = 0; i < mortonCodeTree.Length; i++){
+            idxsTreeOrder[i] = mortonCodeTree[i].gaussianIdx;
+        }
+
+        // Create AABBs for every gaussian primitive
+        int lastLayerStartIndex = aabbs.Count;
+        int lastLayerCount = gaussians.Length;
+        BoundingBoxCalcJob job = new BoundingBoxCalcJob(){
+            bufferIdx = gaussianBufferIdx,
+            gaussians = gaussiansNative,
+            idxsTreeOrder = idxsTreeOrder,
+            result = aabbsNative
+        };
+
+        JobHandle jh = job.Schedule(gaussians.Length, 16);
+        jh.Complete();
+
+        foreach(AABB x in aabbsNative){
+            aabbs.Add(x);
+        }
+        gaussiansNative.Dispose();
+        idxsTreeOrder.Dispose();
+        aabbsNative.Dispose();
+
+        // Build BVH from AABBs
+        while(lastLayerCount > 1){
+            int thisLayerStartIndex = aabbs.Count;
+            int thisLayerCount = 0;
+
+            for(int i = 0; i < lastLayerCount - 1; i+=2){
+                CreateParentNode(lastLayerStartIndex + i, lastLayerStartIndex + i +1, ref aabbs);
+                thisLayerCount += 1;
+            }
+
+            // Handle an odd number by moving node up a layer
+            if(lastLayerCount % 2 != 0){
+                AABB aabb = new AABB();
+
+                aabb.primitiveCount = uint.MaxValue;
+                int childIdx = lastLayerStartIndex + lastLayerCount - 1;
+                aabb.leftChildIndex = (uint) childIdx;
+                aabb.rightChildIndex = uint.MaxValue;   
+
+                aabb.min = aabbs[childIdx].min;
+                aabb.max = aabbs[childIdx].max;
+
+                aabbs.Add(aabb);
+
+                thisLayerCount++;
+            }
+
+            lastLayerStartIndex = thisLayerStartIndex;
+            lastLayerCount = thisLayerCount;
+
+        }
+        
+    }
+
+
+    public static uint BuildBVHForGaussians(Gaussian3D[] gaussians,
+        ref List<AABB> aabbs, int gaussianBufferIdx){
+        
+        int starting = aabbs.Count;
+        // Calculate morton codes for all Gaussians
+        MortonPayload[] mortonCodes = CalcMortonCodes(gaussians);
+
+        // Sort Morton codes to create tree
+        Array.Sort(mortonCodes, new MortonPayloadComp());
+
+        // Create AABBs 
+        BuildAABBsFromTree(mortonCodes, ref aabbs, gaussians, gaussianBufferIdx);
+
+        return (uint) (aabbs.Count - 1);
+
+    }
+
+
 }
