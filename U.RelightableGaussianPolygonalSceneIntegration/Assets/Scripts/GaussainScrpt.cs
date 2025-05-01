@@ -11,7 +11,6 @@ public class GaussianScrpt : MonoBehaviour
     [SerializeField]
     private DefaultAsset gaussianFile;
 
-    [Header("References")]
     [Tooltip("Scale applied to gaussians individually.")]
     [SerializeField]
     private float gaussianSpaceScale = 1.0f;

@@ -1,6 +1,4 @@
 #define FLT_MAX 3.402823e+38
-// Upgrade NOTE: excluded shader from DX11 because it uses wrong array syntax (type[size] name)
-#pragma exclude_renderers d3d11
 #define UINT_MAX 4294967295U
 #define EPSILON 1e-6
 #define LOW_PRECISION_EPSILON 1e-3

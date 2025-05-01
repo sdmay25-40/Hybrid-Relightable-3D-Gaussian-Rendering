@@ -152,7 +152,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ac4600c76b062c4981284a6282ee6bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gaussianFile: {fileID: 102900000, guid: d2e9d5096f8cb44e49570e53a325f000, type: 3}
+  gaussianFile: {fileID: 102900000, guid: bc29d0b8c39224a61b35e281bc323015, type: 3}
+  gaussianSpaceScale: 0.00024
 --- !u!4 &255379477
 Transform:
   m_ObjectHideFlags: 0

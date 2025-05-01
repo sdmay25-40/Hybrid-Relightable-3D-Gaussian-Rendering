@@ -250,6 +250,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0728a85736e0c4e4685fd94386986a81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  theta: 0
+  r: 0
   toOrbit: {fileID: 1353237656}
 --- !u!114 &138301033
 MonoBehaviour:
@@ -276,7 +278,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1353237658}
   - component: {fileID: 1353237661}
-  - component: {fileID: 1353237660}
   m_Layer: 0
   m_Name: Gaussian
   m_TagString: Untagged
@@ -299,18 +300,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 180, y: 0, z: 0}
---- !u!114 &1353237660
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1353237656}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 893573e3d000341478a0be4a4f1cd9f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1353237661
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -472,4 +461,3 @@ SceneRoots:
   - {fileID: 1683544514}
   - {fileID: 1353237658}
   - {fileID: 1592853317}
-
