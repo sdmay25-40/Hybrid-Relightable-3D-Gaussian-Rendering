@@ -1,0 +1,33 @@
+{
+  "name": "com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering",
+  "version": "1.0.0",
+  "displayName": "Hybrid Relightable 3D Gaussian Rendering",
+  "description": "Convert video into realistic 3D Gaussian models using machine learning techniques. These models integrate seamlessly into Unity and are rendered in real-time using our hybrid path-tracing pipeline.",
+  "unity": "2022.3",
+  "keywords": [
+    "rendering",
+    "graphics",
+    "gaussian",
+    "pbr",
+    "sfm",
+    "ai",
+    "models"
+  ],
+  "author": {
+    "name": "Jackson Vanderheyden, Brian Xicon, Luke Broglio, Ethan Gasner, Kyle Kohl",
+    "email": "jacksonvan2003@gmail.com",
+    "url": "https://sdmay25-40.sd.ece.iastate.edu/"
+  },
+  "samples": [
+    {
+      "displayName": "Demo Cornell Box (Diffuse)",
+      "description": "A minimal, diffuse-only scene demonstrating the path tracing capabilities of the hybrid 3D Gaussian renderer.",
+      "path": "Samples~/DemoCornellBox"
+    },
+    {
+      "displayName": "Demo Cornell Box (PBR)",
+      "description": "A minimal, PBR scene demonstrating the path tracing capabilities of the hybrid 3D Gaussian renderer.",
+      "path": "Samples~/DemoCornellBoxPBR"
+    }
+  ]
+}
