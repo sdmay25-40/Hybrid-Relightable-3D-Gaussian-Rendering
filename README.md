@@ -46,7 +46,7 @@ Follow these [instructions](https://phoenixnap.com/kb/install-python-mac)  for M
 1. Verify Python is installed on Windows
 1. Verify pip is installed on Windows
 
-### 3. Install tkinter
+### 2. Install tkinter
 #### For Windows
 Run this command in your terminal 
 ```
