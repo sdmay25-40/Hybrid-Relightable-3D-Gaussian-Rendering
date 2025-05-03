@@ -9,7 +9,7 @@ public class GaussianScrpt : MonoBehaviour
     [Header("References")]
     [Tooltip("Assign a 3D Gaussian *.ply file here.")]
     [SerializeField]
-    private DefaultAsset gaussianFile;
+    private Object gaussianFile;
     [Tooltip("Scale applied to gaussians individually.")]
     public float gaussianSpaceScale = 1.0f;
 
