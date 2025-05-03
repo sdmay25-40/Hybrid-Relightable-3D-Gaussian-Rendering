@@ -20,6 +20,11 @@
   },
   "samples": [
     {
+      "displayName": "3D Model Generation Scene ",
+      "description": "A scene setup to run the python scripts used to create 3D Gaussian models.",
+      "path": "Samples~/Generate3DModel"
+    },
+    {
       "displayName": "Demo Cornell Box (Diffuse)",
       "description": "A minimal, diffuse-only scene demonstrating the path tracing capabilities of the hybrid 3D Gaussian renderer.",
       "path": "Samples~/DemoCornellBox"
@@ -29,5 +34,6 @@
       "description": "A minimal, PBR scene demonstrating the path tracing capabilities of the hybrid 3D Gaussian renderer.",
       "path": "Samples~/DemoCornellBoxPBR"
     }
+
   ]
 }
