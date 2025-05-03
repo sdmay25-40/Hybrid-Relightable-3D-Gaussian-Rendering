@@ -24,7 +24,11 @@ This repository contains the official implementation of our senior design projec
 - Must have the plyfile libary installed 
 - Must have the ipython libary installed 
 - Must have the torch libary installed 
+- Must have opencv-python libary installed
+- Must have torchvision libary installed
+- Must have tkinter libary installed. (_tkinter must be installed globally_)
 - Must have Unity installed on your computer.
+- Must have CUDA installed on your computer.
 
 ### Hardware Requirements:
 - Must have an NVIDIA graphics card capable of running CUDA for optimizing 3D Gaussians.
@@ -42,20 +46,25 @@ Follow these [instructions](https://phoenixnap.com/kb/install-python-mac)  for M
 1. Verify Python is installed on Windows
 1. Verify pip is installed on Windows
 
+### 3. Install tkinter
+#### For Windows
+Run this command in your terminal 
+```
+pip install tkinter
+```
+#### For Linux
+```
+sudo apt-get install python3-tk
+```
 
-### 2. Install Colmap
+### 3. Install other dependencies
 Run this command in your terminal:
 ```
-pip install pycolmap 
-```
-
-### 3. Install AI dependencies
-Run this command in your terminal:
-```
-pip install plyfile ipython torch
+pip install plyfile ipython torch torchvision opencv-python
 ```
 
 ---
+
 
 
 ## Pipeline Overview
