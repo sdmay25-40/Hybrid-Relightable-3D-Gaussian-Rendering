@@ -7,9 +7,9 @@ using System;              // For general C# features like DateTime
 public class PythonScriptRunner : MonoBehaviour
 {
     // Paths to the Python scripts to be executed
-    private string vidConverter = "Packages/HybridRelightable3DGaussianRendering/Runtime/ML/scripts/vid2image.py";
-    private string sfm = "Packages/HybridRelightable3DGaussianRendering/Runtime/ML/scripts/SfMScript.py";
-    private string optimizer = "Packages/HybridRelightable3DGaussianRendering/Runtime/ML/scripts/main.py";
+    private string vidConverter = "Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/scripts/vid2image.py";
+    private string sfm = "Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/scripts/SfMScript.py";
+    private string optimizer = "Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/scripts/main.py";
     public string pythonExecutable = "C:\\YOUR\\FILE\\PATH\\python.exe";
 
     // Max allowed time (in seconds) for a script to run before timing out
@@ -18,6 +18,12 @@ public class PythonScriptRunner : MonoBehaviour
     // Unity method that runs when the scene starts
     void Start()
     {
+        vidConverter = Path.GetFullPath(vidConverter);
+        sfm = Path.GetFullPath(sfm);
+        optimizer = Path.GetFullPath(optimizer);
+
+
+        //UnityEngine.Debug.Log(System.IO.Directory.GetCurrentDirectory());
         // Start the coroutine to run scripts one after the other
         StartCoroutine(RunSequentialScripts());
     }
@@ -25,6 +31,7 @@ public class PythonScriptRunner : MonoBehaviour
     // Coroutine that runs the Python scripts sequentially
     IEnumerator RunSequentialScripts()
     {
+
         // Check if the first script exists
         if (File.Exists(vidConverter))
         {
