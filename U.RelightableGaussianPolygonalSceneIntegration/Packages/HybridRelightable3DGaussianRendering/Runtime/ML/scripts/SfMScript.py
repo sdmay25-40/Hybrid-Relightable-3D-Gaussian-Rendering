@@ -41,8 +41,8 @@ root = tk.Tk()
 root.withdraw()
 
 # Define paths used throughout the script (could be dynamically set later)
-datasetPath = Path("Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/sfm")
-imagePath = Path("Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/output_images")
+datasetPath = Path("Packages/HybridRelightable3DGaussianRendering/Runtime/ML/sfm")
+imagePath = Path("Packages/HybridRelightable3DGaussianRendering/Runtime/ML/output_images")
 databasePath = datasetPath / 'database.db'
 
 if databasePath.exists():
@@ -53,7 +53,7 @@ if databasePath.exists():
         print(f"[WARN] Could not delete old database: {e}")
 
 # Prompt the user to select the COLMAP batch executable
-batchFile = Path("Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/colmap/COLMAP.bat")
+batchFile = Path("Packages/HybridRelightable3DGaussianRendering/Runtime/ML/colmap/COLMAP.bat")
 
 for meta_file in imagePath.glob("*.jpg.meta"):
     try:

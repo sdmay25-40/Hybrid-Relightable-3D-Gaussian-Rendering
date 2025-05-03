@@ -57,6 +57,6 @@ def video_to_images(output_folder, maxframes):
 
 # This block runs only if the script is executed directly (not imported)
 if __name__ == "__main__":
-    output_folder = "Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/output_images"  # Output path for extracted images
+    output_folder = "Packages/HybridRelightable3DGaussianRendering/Runtime/ML/output_images"  # Output path for extracted images
     maxframes = 300  # Limit the number of frames to extract
     video_to_images(output_folder, maxframes)

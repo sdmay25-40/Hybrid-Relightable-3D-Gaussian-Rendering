@@ -1,8 +1,8 @@
 import os
 from train import Trainer
-ply_file = os.path.join("Packages", "com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering", "Runtime", "ML", "sfm", "output.ply")
-colmap_model = os.path.join("Packages", "com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering", "Runtime", "ML", "sfm", "sparse", "0")
-image_folder = os.path.join("Packages", "com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering", "Runtime", "ML", "output_images")
+ply_file = os.path.join("Packages", "HybridRelightable3DGaussianRendering", "Runtime", "ML", "sfm", "output.ply")
+colmap_model = os.path.join("Packages", "HybridRelightable3DGaussianRendering", "Runtime", "ML", "sfm", "sparse", "0")
+image_folder = os.path.join("Packages", "HybridRelightable3DGaussianRendering", "Runtime", "ML", "output_images")
 
 print("---------------Optimizing Model-----------------------")
 
@@ -16,4 +16,4 @@ trainer.train()
 
 
 
-trainer.gaussians.save_ply("Packages/com.isu_sdmay25_40.hybrid_relightable_3d_gaussian_rendering/Runtime/ML/optimizedPLY.ply")
+trainer.gaussians.save_ply("Packages/HybridRelightable3DGaussianRendering/Runtime/ML/optimizedPLY.ply")
