@@ -33,6 +33,11 @@
       "displayName": "Demo Cornell Box (PBR)",
       "description": "A minimal, PBR scene demonstrating the path tracing capabilities of the hybrid 3D Gaussian renderer.",
       "path": "Samples~/DemoCornellBoxPBR"
+    },
+    {
+      "displayName": "Demo Hybrid Cornell Box ",
+      "description": "A hybrid scene with a minimal diffuse-only cornell box and a gaussian model demonstrating the hybrid rendering elements of the hybrid 3D Gaussian renderer.",
+      "path": "Samples~/DemoHybridCornellBox"
     }
 
   ]

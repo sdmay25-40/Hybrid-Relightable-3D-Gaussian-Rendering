@@ -217,8 +217,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                         if (t > 0)
                         {
                             float3 rx = pathOriginObjSpace + (t * pathDirObjSpace);
-                            float opacity = opacityAtPoint(rx, gauss);
-                            opacity *= gauss.opacity;
+                            float opacity = 2 * opacityAtPoint(rx, gauss);
+                            //opacity *= gauss.opacity;
                             
                             
                             float3 pToO = rx - gauss.pos;
