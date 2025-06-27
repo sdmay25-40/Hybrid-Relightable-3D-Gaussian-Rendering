@@ -2,7 +2,7 @@
 Team 40 – Senior Design May 2025  
 Jackson Vanderheyden (Graphics Scope Manager), Brian Xicon (Machine Learning Scope Manager), Luke Broglio (Schedule Manager), Ethan Gasner (Documentation Manager), Kyle Kohl (Communication Manager), <br>  
 | [Project Page](https://sdmay25-40.sd.ece.iastate.edu/)|<br>  
-![Teaser](images/CornellBox.png)
+![Teaser](images/guitar.png)
 
 This repository contains the official implementation of our senior design project **Hybrid Relightable 3D Gaussian Rendering**, which enables high-quality 3D models to be reconstructed from video using AI. Our system converts video into realistic, relightable 3D Gaussian models that can be seamlessly used within the Unity Game Engine. Users can place and transform these models alongside Unity-supported objects, enabling intuitive scene authoring.
 
